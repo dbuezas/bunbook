@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.5
+
+- Fixed named imports with `as` renaming (e.g. `import { foo as bar }`)
+- Fixed `import.meta` usage (dir, file, url, path) in notebook cells
+- Fixed Plotly charts not rendering when called from imported .ts files
+- Fixed Plotly output truncated for large datasets
+- `function` and `async function` declarations now persist across cells
+- `export function` and `export async function` also supported
+
 ## 0.0.4
 
 - "Create: New BunBook Notebook" command in the command palette
