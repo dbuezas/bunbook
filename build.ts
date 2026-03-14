@@ -10,7 +10,7 @@ async function build() {
     Bun.build({
       entrypoints: ["src/extension.ts"],
       outdir: "out",
-      external: ["vscode"],
+      external: ["vscode", "typescript"],
       format: "cjs",
       target: "node",
       sourcemap: production ? "none" : "linked",

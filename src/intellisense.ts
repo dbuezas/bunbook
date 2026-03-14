@@ -1,6 +1,32 @@
 import * as vscode from "vscode";
-import * as ts from "typescript";
+import type * as TS from "typescript";
 import * as path from "path";
+
+let ts: typeof TS;
+
+function loadTypeScript(): typeof TS {
+  if (ts) return ts;
+  // Use TypeScript from VS Code's built-in extension
+  const tsExtension = vscode.extensions.getExtension(
+    "vscode.typescript-language-features"
+  );
+  if (tsExtension) {
+    const tsPath = path.join(
+      tsExtension.extensionPath,
+      "node_modules",
+      "typescript"
+    );
+    try {
+      ts = require(tsPath);
+      return ts;
+    } catch {
+      // fall through to bundled fallback
+    }
+  }
+  // Fallback: try resolving from node_modules (dev / has typescript installed)
+  ts = require("typescript");
+  return ts;
+}
 
 /**
  * Provides TypeScript intellisense for bunbook notebook cells by creating
@@ -9,7 +35,7 @@ import * as path from "path";
  */
 export class BunbookIntellisense {
   private readonly _disposables: vscode.Disposable[] = [];
-  private _service: ts.LanguageService | null = null;
+  private _service: TS.LanguageService | null = null;
   private _host: VirtualLanguageServiceHost | null = null;
 
   private readonly _diagnostics: vscode.DiagnosticCollection;
@@ -169,9 +195,10 @@ export class BunbookIntellisense {
   }
 
   private _ensureService(cwd: string): {
-    service: ts.LanguageService;
+    service: TS.LanguageService;
     host: VirtualLanguageServiceHost;
   } {
+    loadTypeScript();
     if (!this._service || !this._host || this._host.cwd !== cwd) {
       this._service?.dispose();
       this._host = new VirtualLanguageServiceHost(cwd, this._extensionPath);
@@ -186,7 +213,7 @@ export class BunbookIntellisense {
   private _sync(
     doc: vscode.TextDocument
   ): {
-    service: ts.LanguageService;
+    service: TS.LanguageService;
     host: VirtualLanguageServiceHost;
     cellIndex: number;
   } | null {
@@ -259,7 +286,7 @@ export class BunbookIntellisense {
     const ctx = this._sync(doc);
     if (!ctx) return undefined;
 
-    const formatSettings: ts.FormatCodeSettings = {
+    const formatSettings: TS.FormatCodeSettings = {
       tabSize: options.tabSize,
       indentSize: options.tabSize,
       convertTabsToSpaces: options.insertSpaces,
@@ -419,7 +446,7 @@ declare namespace Plotly {
 
 const AMBIENT_FILE = "/___bunbook_ambient___.d.ts";
 
-class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
+class VirtualLanguageServiceHost implements TS.LanguageServiceHost {
   private _content = "";
   private _version = 0;
   private _cellOffsets: { cellIndex: number; start: number; length: number }[] =
@@ -434,7 +461,7 @@ class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
     this.virtualFile = path.join(cwd, VIRTUAL_FILENAME);
   }
 
-  getCompilationSettings(): ts.CompilerOptions {
+  getCompilationSettings(): TS.CompilerOptions {
     return {
       target: ts.ScriptTarget.ES2022,
       module: ts.ModuleKind.ESNext,
@@ -461,7 +488,7 @@ class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
     return "0";
   }
 
-  getScriptSnapshot(fileName: string): ts.IScriptSnapshot | undefined {
+  getScriptSnapshot(fileName: string): TS.IScriptSnapshot | undefined {
     if (fileName === this.virtualFile) {
       return ts.ScriptSnapshot.fromString(this._content);
     }
@@ -478,7 +505,7 @@ class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
     return this.cwd;
   }
 
-  getDefaultLibFileName(options: ts.CompilerOptions): string {
+  getDefaultLibFileName(options: TS.CompilerOptions): string {
     return ts.getDefaultLibFilePath(options);
   }
 

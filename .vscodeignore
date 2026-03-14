@@ -3,4 +3,12 @@ node_modules/**
 .vscode/**
 tsconfig.json
 esbuild.mjs
-*.map
+**/*.map
+out/**/*.ts
+samples/**
+build.ts
+bun.lock
+.gitignore
+CLAUDE.md
+.claude/**
+screenshot.png

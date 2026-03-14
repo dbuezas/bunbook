@@ -3,6 +3,10 @@
   "displayName": "BunBook",
   "description": "Run TypeScript as a native VS Code notebook with Plotly support",
   "version": "0.0.1",
+  "publisher": "DavidBuezas",
+  "license": "MIT",
+  "repository": "https://github.com/dbuezas/bunbook",
+  "keywords": ["typescript", "notebook", "jupyter", "bun", "plotly", "interactive"],
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -66,6 +70,7 @@
     ]
   },
   "scripts": {
+    "vscode:prepublish": "bun build.ts --production",
     "compile": "bun build.ts",
     "watch": "bun build.ts --watch",
     "package": "bun build.ts --production"
