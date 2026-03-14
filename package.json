@@ -1,0 +1,49 @@
+{
+  "name": "ts-notebook",
+  "displayName": "TypeScript Notebook",
+  "description": "Run TypeScript as a native VS Code notebook with Plotly support",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Notebooks"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "notebooks": [
+      {
+        "type": "ts-notebook",
+        "displayName": "TypeScript Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.tsbook"
+          }
+        ]
+      }
+    ],
+    "notebookRenderer": [
+      {
+        "id": "ts-notebook-plotly-renderer",
+        "displayName": "Plotly Renderer",
+        "entrypoint": "./out/renderer/index.js",
+        "mimeTypes": [
+          "application/vnd.plotly+json"
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "bun esbuild.mjs",
+    "watch": "bun esbuild.mjs --watch",
+    "package": "bun esbuild.mjs --production"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@types/vscode-notebook-renderer": "^1.72.3",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "cells": [
+    {
+      "kind": "markdown",
+      "value": "# TypeScript Notebook Demo\n\nThis notebook demonstrates running TypeScript cells with shared state and Plotly charts."
+    },
+    {
+      "kind": "code",
+      "language": "typescript",
+      "value": "const greeting = \"Hello from TypeScript Notebook!\";\nconsole.log(greeting);\nconsole.log(`Running on Node ${process.version}`);"
+    },
+    {
+      "kind": "code",
+      "language": "typescript",
+      "value": "// This cell can access variables from the previous cell\nconsole.log(`Previous greeting was: ${greeting}`);\n\nconst numbers = [1, 2, 3, 4, 5];\nconst sum = numbers.reduce((a, b) => a + b, 0);\nconsole.log(`Sum of ${numbers} = ${sum}`);"
+    },
+    {
+      "kind": "code",
+      "language": "typescript",
+      "value": "// Render a Plotly chart inline\ndisplay({\n  data: [\n    {\n      x: [1, 2, 3, 4, 5],\n      y: [1, 4, 9, 16, 25],\n      type: \"scatter\",\n      mode: \"lines+markers\",\n      name: \"x squared\",\n    },\n    {\n      x: [1, 2, 3, 4, 5],\n      y: [1, 8, 27, 64, 125],\n      type: \"scatter\",\n      mode: \"lines+markers\",\n      name: \"x cubed\",\n    },\n  ],\n  layout: {\n    title: \"Power Functions\",\n    xaxis: { title: \"x\" },\n    yaxis: { title: \"y\" },\n  },\n});"
+    }
+  ]
+}
