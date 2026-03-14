@@ -2,6 +2,8 @@
 
 A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). Fast startup, shared state across cells, inline Plotly charts, and full TypeScript intellisense.
 
+[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=DavidBuezas.bunbook) | [Install in VS Code](vscode:extension/DavidBuezas.bunbook)
+
 ![BunBook screenshot](https://raw.githubusercontent.com/dbuezas/bunbook/main/screenshot.png)
 
 ## Features
