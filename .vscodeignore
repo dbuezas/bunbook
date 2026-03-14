@@ -1,5 +1,4 @@
 src/**
-node_modules/**
 .vscode/**
 tsconfig.json
 esbuild.mjs
@@ -13,3 +12,6 @@ bun.lock
 CLAUDE.md
 .claude/**
 screenshot.png
+node_modules/**
+!node_modules/**/*.d.ts
+!node_modules/**/package.json

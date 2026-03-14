@@ -59,7 +59,7 @@ See `samples/with-dependencies/` for a full example with linear regression and P
 
 ```sh
 bun install
-bun run compile
+bun start
 ```
 
-Press `F5` in VS Code to launch the Extension Host for testing.
+This builds, packages, and installs the extension locally. Reload VS Code to pick up changes.

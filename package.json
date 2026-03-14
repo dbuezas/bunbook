@@ -2,7 +2,7 @@
   "name": "bunbook",
   "displayName": "BunBook",
   "description": "Run TypeScript as a native VS Code notebook with Plotly support",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "DavidBuezas",
   "license": "MIT",
   "repository": "https://github.com/dbuezas/bunbook",
@@ -81,14 +81,16 @@
   "scripts": {
     "vscode:prepublish": "bun build.ts --production",
     "compile": "bun build.ts",
-    "watch": "bun build.ts --watch",
-    "package": "bunx @vscode/vsce package --allow-missing-repository"
+    "start": "bun run package && code --install-extension bunbook-*.vsix",
+    "package": "rm -rf node_modules && bun install --production && bunx @vscode/vsce package && bun install"
+  },
+  "dependencies": {
+    "@types/bun": "^1.3.10"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
-    "bun-types": "^1.3.10",
     "typescript": "^5.3.0"
   }
 }

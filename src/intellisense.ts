@@ -6,21 +6,23 @@ let ts: typeof TS;
 
 function loadTypeScript(): typeof TS {
   if (ts) return ts;
-  // Use TypeScript from VS Code's built-in extension
+  // Use TypeScript from VS Code's built-in extensions
   const tsExtension = vscode.extensions.getExtension(
     "vscode.typescript-language-features"
   );
   if (tsExtension) {
-    const tsPath = path.join(
-      tsExtension.extensionPath,
-      "node_modules",
-      "typescript"
-    );
-    try {
-      ts = require(tsPath);
-      return ts;
-    } catch {
-      // fall through to bundled fallback
+    // Try sibling node_modules (VS Code bundles TS at extensions/node_modules/typescript)
+    const paths = [
+      path.join(tsExtension.extensionPath, "node_modules", "typescript"),
+      path.join(tsExtension.extensionPath, "..", "node_modules", "typescript"),
+    ];
+    for (const tsPath of paths) {
+      try {
+        ts = require(tsPath);
+        return ts;
+      } catch {
+        // try next path
+      }
     }
   }
   // Fallback: try resolving from node_modules (dev / has typescript installed)
@@ -470,10 +472,9 @@ class VirtualLanguageServiceHost implements TS.LanguageServiceHost {
       esModuleInterop: true,
       allowJs: true,
       lib: ["lib.es2022.d.ts"],
-      types: ["bun-types"],
       typeRoots: [
-        path.join(this._extensionPath, "node_modules"),
-        path.join(this.cwd, "node_modules"),
+        path.join(this.cwd, "node_modules", "@types"),
+        path.join(this._extensionPath, "node_modules", "@types"),
       ],
     };
   }
