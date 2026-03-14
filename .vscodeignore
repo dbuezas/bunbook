@@ -5,6 +5,7 @@ tsconfig.json
 esbuild.mjs
 **/*.map
 out/**/*.ts
+!out/worker.ts
 samples/**
 build.ts
 bun.lock
