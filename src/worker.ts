@@ -13,6 +13,7 @@ const transpiler = new Bun.Transpiler({ loader: "ts" });
 
 // Provide Plotly.newPlot globally so cells can call it directly.
 // Instead of rendering, it serializes the data as a marker for the renderer.
+// Uses process.stdout.write (not console.log, which truncates large arrays).
 (globalThis as any).Plotly = {
   newPlot(data: any[], layout?: any, config?: any) {
     const json = JSON.stringify({ data, layout, config });
@@ -39,7 +40,12 @@ function rewriteDeclarations(code: string): string {
   return code
     .replace(
       /^import\s+(\{[^}]+\})\s+from\s+(['"][^'"]+['"])\s*;?$/gm,
-      (_, bindings, spec) => `var ${bindings} = await import(${resolveImportPath(spec)});`
+      (_, bindings, spec) => {
+        // Convert import-style "as" to destructuring-style ":"
+        // e.g. { foo as bar } -> { foo: bar }
+        const destructured = bindings.replace(/\bas\b/g, ":");
+        return `var ${destructured} = await import(${resolveImportPath(spec)});`;
+      }
     )
     .replace(
       /^import\s+(\w+)\s+from\s+(['"][^'"]+['"])\s*;?$/gm,
@@ -51,18 +57,37 @@ function rewriteDeclarations(code: string): string {
     )
     .replace(/^import\s+(['"][^'"]+['"])\s*;?$/gm, "")
     .replace(/^(export\s+)?(const|let)\s+/gm, "var ")
-    .replace(/^(export\s+)?class\s+(\w+)/gm, "var $2 = class $2");
+    .replace(/^(export\s+)?class\s+(\w+)/gm, "var $2 = class $2")
+    .replace(/^(export\s+)?(async\s+)?function\s+(\w+)/gm, (_, _exp, async_, name) =>
+      `var ${name} = ${async_ ?? ""}function ${name}`
+    )
+    // import.meta is not valid in eval context; replace with Bun equivalents
+    .replace(/\bimport\.meta\.dir\b/g, "process.cwd()")
+    .replace(/\bimport\.meta\.file\b/g, "__filename")
+    .replace(/\bimport\.meta\.url\b/g, `"file://" + process.cwd() + "/"`)
+    .replace(/\bimport\.meta\.path\b/g, "process.cwd()")
+    .replace(/\bimport\.meta\b/g, `({ dir: process.cwd(), file: __filename, url: "file://" + process.cwd() + "/", path: process.cwd() })`);
 }
 
 let buffer = "";
 let processing = false;
 const queue: string[] = [];
 
+// Helper: write to stdout/stderr via process (Node-style) and wait for flush.
+// All output (markers, user code, Plotly) goes through process.stdout/stderr
+// to avoid ordering issues between Bun.write and process.stdout.write.
+function writeOut(data: string): Promise<void> {
+  return new Promise((r) => { process.stdout.write(data, () => r()); });
+}
+function writeErr(data: string): Promise<void> {
+  return new Promise((r) => { process.stderr.write(data, () => r()); });
+}
+
 async function processCode(code: string) {
   await Bun.sleep(0);
 
-  await Bun.write(Bun.stdout, "\n___OUT_START___\n");
-  await Bun.write(Bun.stderr, "\n___ERR_START___\n");
+  await writeOut("\n___OUT_START___\n");
+  await writeErr("\n___ERR_START___\n");
 
   try {
     // Transpile TS -> JS, then rewrite declarations for persistence
@@ -95,10 +120,8 @@ async function processCode(code: string) {
     console.error(msg);
   }
 
-  await Bun.sleep(0);
-
-  await Bun.write(Bun.stdout, "\n___OUT_END___\n");
-  await Bun.write(Bun.stderr, "\n___ERR_END___\n");
+  await writeOut("\n___OUT_END___\n");
+  await writeErr("\n___ERR_END___\n");
 }
 
 async function processQueue() {
