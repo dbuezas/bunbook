@@ -86,7 +86,7 @@
   "scripts": {
     "vscode:prepublish": "bun build.ts --production",
     "compile": "bun build.ts",
-    "start": "bun run package && code --install-extension bunbook-*.vsix",
+    "start": "rm -f bunbook-*.vsix && bun run package && code --install-extension bunbook-*.vsix",
     "package": "rm -rf node_modules && bun install --production && bunx @vscode/vsce package && bun install"
   },
   "dependencies": {
