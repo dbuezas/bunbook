@@ -1,9 +1,0 @@
-{
-  "cells": [
-    {
-      "kind": "code",
-      "language": "bunbook-typescript",
-      "value": "console.log(\"Hello wold!\")"
-    }
-  ]
-}

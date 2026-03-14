@@ -17,11 +17,6 @@
     {
       "kind": "code",
       "language": "bunbook-typescript",
-      "value": "import { dep } from './dep'\nconsole.log({ dep })\nconsole.table({ dep })"
-    },
-    {
-      "kind": "code",
-      "language": "bunbook-typescript",
       "value": "// Render a Plotly chart inline\nPlotly.newPlot(\n  [\n    {\n      x: [1, 2, 3, 4, 5],\n      y: [1, 4, 9, 16, 25],\n      type: \"scatter\",\n      mode: \"lines+markers\",\n      name: \"x²\",\n    },\n    {\n      x: [1, 2, 3, 4, 5],\n      y: [1, 8, 27, 64, 125],\n      type: \"scatter\",\n      mode: \"lines+markers\",\n      name: \"x³\",\n    },\n  ],\n  {\n    title: \"Power Functions\",\n    xaxis: { title: \"x\" },\n    yaxis: { title: \"y\" },\n  }\n);"
     }
   ]

@@ -1,6 +1,6 @@
-import * as vscode from "vscode";
-import type * as TS from "typescript";
 import * as path from "path";
+import type * as TS from "typescript";
+import * as vscode from "vscode";
 
 let ts: typeof TS;
 
@@ -82,9 +82,11 @@ export class BunbookIntellisense {
     this._disposables.push(
       vscode.workspace.onDidChangeTextDocument((e) => {
         const notebook = vscode.workspace.notebookDocuments.find((nb) =>
-          nb.getCells().some(
-            (c) => c.document.uri.toString() === e.document.uri.toString()
-          )
+          nb
+            .getCells()
+            .some(
+              (c) => c.document.uri.toString() === e.document.uri.toString()
+            )
         );
         if (notebook?.notebookType === "bunbook") {
           this._debouncedDiagnostics(notebook);
@@ -169,13 +171,10 @@ export class BunbookIntellisense {
         diag.category === ts.DiagnosticCategory.Error
           ? vscode.DiagnosticSeverity.Error
           : diag.category === ts.DiagnosticCategory.Warning
-          ? vscode.DiagnosticSeverity.Warning
-          : vscode.DiagnosticSeverity.Information;
+            ? vscode.DiagnosticSeverity.Warning
+            : vscode.DiagnosticSeverity.Information;
 
-      const message = ts.flattenDiagnosticMessageText(
-        diag.messageText,
-        "\n"
-      );
+      const message = ts.flattenDiagnosticMessageText(diag.messageText, "\n");
 
       const vsDiag = new vscode.Diagnostic(
         new vscode.Range(startPos, endPos),
@@ -212,17 +211,15 @@ export class BunbookIntellisense {
     return { service: this._service, host: this._host };
   }
 
-  private _sync(
-    doc: vscode.TextDocument
-  ): {
+  private _sync(doc: vscode.TextDocument): {
     service: TS.LanguageService;
     host: VirtualLanguageServiceHost;
     cellIndex: number;
   } | null {
     const notebook = vscode.workspace.notebookDocuments.find((nb) =>
-      nb.getCells().some(
-        (c) => c.document.uri.toString() === doc.uri.toString()
-      )
+      nb
+        .getCells()
+        .some((c) => c.document.uri.toString() === doc.uri.toString())
     );
     if (!notebook || notebook.notebookType !== "bunbook") return null;
 
@@ -354,7 +351,10 @@ export class BunbookIntellisense {
     );
     if (offset === undefined) return undefined;
 
-    const info = ctx.service.getQuickInfoAtPosition(ctx.host.virtualFile, offset);
+    const info = ctx.service.getQuickInfoAtPosition(
+      ctx.host.virtualFile,
+      offset
+    );
     if (!info) return undefined;
 
     const display = ts.displayPartsToString(info.displayParts);
@@ -370,8 +370,13 @@ export class BunbookIntellisense {
 // Virtual file name only — the host prepends cwd to get the full path
 const VIRTUAL_FILENAME = "___bunbook___.ts";
 
+// Prepended to the virtual file so TypeScript treats it as a module (enabling top-level await)
+const VIRTUAL_PREAMBLE = "export {};\n";
+
 // Ambient declarations for globals available in the worker
 const AMBIENT_DECLARATIONS = `
+/// <reference types="bun-types" />
+
 declare namespace Plotly {
   interface Datum {}
   interface PlotData {
@@ -474,7 +479,9 @@ class VirtualLanguageServiceHost implements TS.LanguageServiceHost {
       lib: ["lib.es2022.d.ts"],
       typeRoots: [
         path.join(this.cwd, "node_modules", "@types"),
+        path.join(this.cwd, "node_modules"),
         path.join(this._extensionPath, "node_modules", "@types"),
+        path.join(this._extensionPath, "node_modules"),
       ],
     };
   }
@@ -511,9 +518,7 @@ class VirtualLanguageServiceHost implements TS.LanguageServiceHost {
   }
 
   fileExists(p: string): boolean {
-    return (
-      p === this.virtualFile || p === AMBIENT_FILE || ts.sys.fileExists(p)
-    );
+    return p === this.virtualFile || p === AMBIENT_FILE || ts.sys.fileExists(p);
   }
 
   readFile(p: string): string | undefined {
@@ -524,16 +529,20 @@ class VirtualLanguageServiceHost implements TS.LanguageServiceHost {
 
   updateVirtualFile(cells: { text: string; cellIndex: number }[]): void {
     const offsets: typeof this._cellOffsets = [];
-    let pos = 0;
+    let pos = VIRTUAL_PREAMBLE.length;
     const parts: string[] = [];
 
     for (const cell of cells) {
-      offsets.push({ cellIndex: cell.cellIndex, start: pos, length: cell.text.length });
+      offsets.push({
+        cellIndex: cell.cellIndex,
+        start: pos,
+        length: cell.text.length,
+      });
       parts.push(cell.text);
       pos += cell.text.length + 1; // +1 for \n separator
     }
 
-    this._content = parts.join("\n");
+    this._content = VIRTUAL_PREAMBLE + parts.join("\n");
     this._cellOffsets = offsets;
     this._version++;
   }

@@ -49,6 +49,7 @@ function rewriteDeclarations(code: string): string {
       /^import\s+\*\s+as\s+(\w+)\s+from\s+(['"][^'"]+['"])\s*;?$/gm,
       (_, name, spec) => `var ${name} = await import(${resolveImportPath(spec)});`
     )
+    .replace(/^import\s+(['"][^'"]+['"])\s*;?$/gm, "")
     .replace(/^(export\s+)?(const|let)\s+/gm, "var ")
     .replace(/^(export\s+)?class\s+(\w+)/gm, "var $2 = class $2");
 }
