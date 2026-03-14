@@ -36,6 +36,11 @@
     ],
     "commands": [
       {
+        "command": "bunbook.newNotebook",
+        "title": "Create: New BunBook Notebook",
+        "shortTitle": "New BunBook"
+      },
+      {
         "command": "bunbook.restartKernel",
         "title": "Restart Kernel",
         "shortTitle": "Restart",

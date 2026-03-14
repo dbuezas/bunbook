@@ -19,6 +19,20 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push({ dispose: () => controller.dispose() });
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("bunbook.newNotebook", async () => {
+      const data = new vscode.NotebookData([
+        new vscode.NotebookCellData(
+          vscode.NotebookCellKind.Code,
+          "",
+          "bunbook-typescript"
+        ),
+      ]);
+      const doc = await vscode.workspace.openNotebookDocument("bunbook", data);
+      await vscode.window.showNotebookDocument(doc);
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("bunbook.restartKernel", () => {
       const notebook = vscode.window.activeNotebookEditor?.notebook;
       controller.restart(notebook);
