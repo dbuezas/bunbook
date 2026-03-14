@@ -6,7 +6,14 @@
   "publisher": "DavidBuezas",
   "license": "MIT",
   "repository": "https://github.com/dbuezas/bunbook",
-  "keywords": ["typescript", "notebook", "jupyter", "bun", "plotly", "interactive"],
+  "keywords": [
+    "typescript",
+    "notebook",
+    "jupyter",
+    "bun",
+    "plotly",
+    "interactive"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -47,7 +54,9 @@
     "languages": [
       {
         "id": "bunbook-typescript",
-        "aliases": ["TypeScript (BunBook)"],
+        "aliases": [
+          "TypeScript (BunBook)"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -73,7 +82,7 @@
     "vscode:prepublish": "bun build.ts --production",
     "compile": "bun build.ts",
     "watch": "bun build.ts --watch",
-    "package": "bun build.ts --production"
+    "package": "bunx @vscode/vsce package --allow-missing-repository"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -10,20 +10,24 @@ const OUT_END = "___OUT_END___";
 const ERR_START = "___ERR_START___";
 const ERR_END = "___ERR_END___";
 
+interface WorkerState {
+  worker: ChildProcess;
+  ready: Promise<void>;
+  stdoutBuffer: string;
+  stderrBuffer: string;
+  pendingResolve:
+    | ((result: { stdout: string; stderr: string }) => void)
+    | null;
+  pendingReject: ((err: Error) => void) | null;
+}
+
 export class BunbookController {
   private readonly _id = "bunbook-controller";
   private readonly _label = "TypeScript (bun)";
   private readonly _supportedLanguages = ["bunbook-typescript"];
   private readonly _controller: vscode.NotebookController;
   private _executionOrder = 0;
-  private _worker: ChildProcess | null = null;
-  private _workerCwd: string | null = null;
-  private _workerReady: Promise<void> | null = null;
-  private _stdoutBuffer = "";
-  private _stderrBuffer = "";
-  private _pendingResolve:
-    | ((result: { stdout: string; stderr: string }) => void)
-    | null = null;
+  private readonly _workers = new Map<string, WorkerState>();
 
   constructor(private readonly _extensionUri: vscode.Uri) {
     this._controller = vscode.notebooks.createNotebookController(
@@ -38,138 +42,153 @@ export class BunbookController {
   }
 
   dispose(): void {
-    this._killWorker();
+    for (const key of this._workers.keys()) {
+      this._killWorker(key);
+    }
     this._controller.dispose();
   }
 
-  restart(): void {
-    this._killWorker();
+  restart(notebook?: vscode.NotebookDocument): void {
+    if (notebook) {
+      this._killWorker(notebook.uri.toString());
+    } else {
+      for (const key of this._workers.keys()) {
+        this._killWorker(key);
+      }
+    }
     this._executionOrder = 0;
   }
 
   private _interrupt(): void {
-    this._killWorker();
+    for (const key of this._workers.keys()) {
+      this._killWorker(key);
+    }
     this._executionOrder = 0;
   }
 
-  private _killWorker(): void {
-    if (this._worker) {
-      this._worker.kill("SIGTERM");
-      this._worker = null;
-      this._workerCwd = null;
-      this._workerReady = null;
-      this._stdoutBuffer = "";
-      this._stderrBuffer = "";
-      this._pendingResolve = null;
-    }
+  private _killWorker(notebookUri: string): void {
+    const state = this._workers.get(notebookUri);
+    if (!state) return;
+
+    state.worker.kill("SIGTERM");
+    const reject = state.pendingReject;
+    this._workers.delete(notebookUri);
+    if (reject) reject(new Error("Worker restarted"));
   }
 
-  private _ensureWorker(cwd: string): Promise<void> {
-    if (this._worker && this._workerCwd === cwd && this._workerReady) {
-      return this._workerReady;
-    }
+  private _ensureWorker(notebook: vscode.NotebookDocument): Promise<void> {
+    const key = notebook.uri.toString();
+    const existing = this._workers.get(key);
+    if (existing) return existing.ready;
 
-    this._killWorker();
-
+    const cwd = path.dirname(notebook.uri.fsPath);
     const workerPath = path.join(
       this._extensionUri.fsPath,
       "out",
       "worker.ts"
     );
 
-    this._workerReady = new Promise<void>((resolve) => {
-      this._worker = spawn("bun", ["run", workerPath], {
+    const state: WorkerState = {
+      worker: spawn("bun", ["run", workerPath], {
         cwd,
         stdio: ["pipe", "pipe", "pipe"],
-      });
+      }),
+      ready: null!,
+      stdoutBuffer: "",
+      stderrBuffer: "",
+      pendingResolve: null,
+      pendingReject: null,
+    };
 
-      this._workerCwd = cwd;
+    let ready = false;
 
-      const onReady = (data: Buffer) => {
+    state.ready = new Promise<void>((resolve) => {
+      state.worker.stdout!.on("data", (data: Buffer) => {
         const text = data.toString();
-        if (text.includes("___WORKER_READY___")) {
-          // Remove ready marker from buffer
-          this._stdoutBuffer = text.split("___WORKER_READY___").pop() ?? "";
-          resolve();
+        if (!ready) {
+          const idx = text.indexOf("___WORKER_READY___");
+          if (idx !== -1) {
+            ready = true;
+            const remainder = text.slice(idx + "___WORKER_READY___".length);
+            if (remainder) {
+              state.stdoutBuffer += remainder;
+            }
+            resolve();
+            this._tryResolve(state);
+            return;
+          }
+          return;
         }
-      };
-
-      this._worker!.stdout!.once("data", onReady);
-
-      this._worker!.stdout!.on("data", (data: Buffer) => {
-        this._stdoutBuffer += data.toString();
-        this._tryResolve();
+        state.stdoutBuffer += text;
+        this._tryResolve(state);
       });
 
-      this._worker!.stderr!.on("data", (data: Buffer) => {
-        this._stderrBuffer += data.toString();
-        this._tryResolve();
+      state.worker.stderr!.on("data", (data: Buffer) => {
+        state.stderrBuffer += data.toString();
+        this._tryResolve(state);
       });
 
-      this._worker!.on("exit", () => {
-        this._worker = null;
-        this._workerCwd = null;
-        this._workerReady = null;
+      state.worker.on("exit", () => {
+        this._workers.delete(key);
       });
     });
 
-    return this._workerReady;
+    this._workers.set(key, state);
+    return state.ready;
   }
 
-  private _tryResolve(): void {
-    if (!this._pendingResolve) return;
+  private _tryResolve(state: WorkerState): void {
+    if (!state.pendingResolve) return;
 
-    const outStart = this._stdoutBuffer.indexOf(OUT_START);
-    const outEnd = this._stdoutBuffer.indexOf(OUT_END);
-    const errStart = this._stderrBuffer.indexOf(ERR_START);
-    const errEnd = this._stderrBuffer.indexOf(ERR_END);
+    const outStart = state.stdoutBuffer.indexOf(OUT_START);
+    const outEnd = state.stdoutBuffer.indexOf(OUT_END);
+    const errStart = state.stderrBuffer.indexOf(ERR_START);
+    const errEnd = state.stderrBuffer.indexOf(ERR_END);
 
     if (outStart !== -1 && outEnd !== -1 && errStart !== -1 && errEnd !== -1) {
-      const stdout = this._stdoutBuffer.slice(
+      const stdout = state.stdoutBuffer.slice(
         outStart + OUT_START.length,
         outEnd
       );
-      const stderr = this._stderrBuffer.slice(
+      const stderr = state.stderrBuffer.slice(
         errStart + ERR_START.length,
         errEnd
       );
 
-      this._stdoutBuffer = this._stdoutBuffer.slice(
-        outEnd + OUT_END.length
-      );
-      this._stderrBuffer = this._stderrBuffer.slice(
-        errEnd + ERR_END.length
-      );
+      state.stdoutBuffer = state.stdoutBuffer.slice(outEnd + OUT_END.length);
+      state.stderrBuffer = state.stderrBuffer.slice(errEnd + ERR_END.length);
 
-      const resolve = this._pendingResolve;
-      this._pendingResolve = null;
+      const resolve = state.pendingResolve;
+      state.pendingResolve = null;
+      state.pendingReject = null;
       resolve({ stdout, stderr });
     }
   }
 
   private async _eval(
+    state: WorkerState,
     code: string,
     token: vscode.CancellationToken
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      if (!this._worker?.stdin) {
+      if (!state.worker.stdin) {
         reject(new Error("Worker not running"));
         return;
       }
 
-      this._pendingResolve = resolve;
+      state.pendingResolve = resolve;
+      state.pendingReject = reject;
 
       const cancelDisposable = token.onCancellationRequested(() => {
-        this._pendingResolve = null;
-        this._killWorker();
+        state.pendingResolve = null;
+        state.pendingReject = null;
         reject(new Error("Execution cancelled."));
       });
 
-      this._worker.stdin.write(EVAL_START + code + EVAL_END);
+      state.worker.stdin.write(EVAL_START + code + EVAL_END);
 
-      // Clean up cancel listener when resolved
-      const origResolve = this._pendingResolve;
-      this._pendingResolve = (result) => {
+      const origResolve = state.pendingResolve;
+      state.pendingResolve = (result) => {
         cancelDisposable.dispose();
         origResolve(result);
       };
@@ -195,13 +214,13 @@ export class BunbookController {
     execution.executionOrder = ++this._executionOrder;
     execution.start(Date.now());
 
-    const notebookDir = path.dirname(notebook.uri.fsPath);
-
     try {
-      await this._ensureWorker(notebookDir);
+      await this._ensureWorker(notebook);
+      const state = this._workers.get(notebook.uri.toString());
+      if (!state) throw new Error("Worker not running");
 
       const code = cell.document.getText();
-      const { stdout, stderr } = await this._eval(code, execution.token);
+      const { stdout, stderr } = await this._eval(state, code, execution.token);
 
       const outputs = parseOutput(stdout);
 

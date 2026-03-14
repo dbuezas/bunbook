@@ -7,7 +7,7 @@
     {
       "kind": "code",
       "language": "bunbook-typescript",
-      "value": "import { $ } from \"bun\";\nconst result = await $`bun install`.quiet();\nconsole.log(result.text());"
+      "value": "import { $ } from \"bun\";\nawait $`bun install`"
     },
     {
       "kind": "code",

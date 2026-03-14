@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "ts-notebook",
+      "dependencies": {
+        "simple-statistics": "^7.8.9",
+      },
       "devDependencies": {
         "@types/node": "^20.11.0",
         "@types/vscode": "^1.85.0",
@@ -21,6 +24,8 @@
     "@types/vscode-notebook-renderer": ["@types/vscode-notebook-renderer@1.72.4", "", {}, "sha512-bdKO41c6Dc24pH/O/eM/jqfCwGH4zc76o/g/6Gt1y/eg/bvvqP2/VpbV+Sa5Te2sZekFRcbYnSSFTKo3wcVGUg=="],
 
     "bun-types": ["bun-types@1.3.10", "", { "dependencies": { "@types/node": "*" } }, "sha512-tcpfCCl6XWo6nCVnpcVrxQ+9AYN1iqMIzgrSKYMB/fjLtV2eyAVEg7AxQJuCq/26R6HpKWykQXuSOq/21RYcbg=="],
+
+    "simple-statistics": ["simple-statistics@7.8.9", "", {}, "sha512-YT6MLqYsz7y1rQZOLFlOCCgSRpCi6bqY417yhoOLI7aVoBi29dD39EPrOE03W9DY25H0J0jizVsHZnkLzyGJFg=="],
 
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 

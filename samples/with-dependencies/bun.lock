@@ -5,7 +5,7 @@
     "": {
       "name": "bunbook-with-dependencies",
       "dependencies": {
-        "simple-statistics": "^7.8.0",
+        "simple-statistics": "^7.8.9",
       },
     },
   },

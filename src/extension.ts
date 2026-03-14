@@ -20,7 +20,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("bunbook.restartKernel", () => {
-      controller.restart();
+      const notebook = vscode.window.activeNotebookEditor?.notebook;
+      controller.restart(notebook);
     })
   );
 
