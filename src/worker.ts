@@ -20,15 +20,16 @@ const transpiler = new Bun.Transpiler({ loader: "ts" });
   },
 };
 
-// Resolve a module specifier to an absolute path if it's relative.
+// Resolve a module specifier to an absolute path from the notebook's cwd.
 function resolveImportPath(specifier: string): string {
   const unquoted = specifier.slice(1, -1); // strip quotes
   const quote = specifier[0];
-  if (unquoted.startsWith("./") || unquoted.startsWith("../")) {
-    const resolved = require("path").resolve(process.cwd(), unquoted);
+  try {
+    const resolved = Bun.resolveSync(unquoted, process.cwd());
     return `${quote}${resolved}${quote}`;
+  } catch {
+    return specifier;
   }
-  return specifier;
 }
 
 // Rewrite const/let to var so declarations persist across evals on globalThis.

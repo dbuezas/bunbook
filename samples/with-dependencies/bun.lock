@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "bunbook-with-dependencies",
+      "dependencies": {
+        "simple-statistics": "^7.8.0",
+      },
+    },
+  },
+  "packages": {
+    "simple-statistics": ["simple-statistics@7.8.9", "", {}, "sha512-YT6MLqYsz7y1rQZOLFlOCCgSRpCi6bqY417yhoOLI7aVoBi29dD39EPrOE03W9DY25H0J0jizVsHZnkLzyGJFg=="],
+  }
+}

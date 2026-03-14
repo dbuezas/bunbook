@@ -1,0 +1,7 @@
+{
+  "name": "bunbook-with-dependencies",
+  "private": true,
+  "dependencies": {
+    "simple-statistics": "^7.8.0"
+  }
+}

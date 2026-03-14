@@ -1,0 +1,33 @@
+{
+  "cells": [
+    {
+      "kind": "markdown",
+      "value": "# Statistics + Plotly Demo\n\nThis notebook shows how to use npm dependencies with BunBook.\nRun `bun install` in this folder first.\n"
+    },
+    {
+      "kind": "code",
+      "language": "bunbook-typescript",
+      "value": "import { $ } from \"bun\";\nconst result = await $`bun install`.quiet();\nconsole.log(result.text());"
+    },
+    {
+      "kind": "code",
+      "language": "bunbook-typescript",
+      "value": "import { linearRegression, linearRegressionLine, mean, standardDeviation } from \"simple-statistics\";\n\n// Generate some noisy data\nconst xs = Array.from({ length: 50 }, (_, i) => i);\nconst ys = xs.map((x) => 2 * x + 10 + (Math.random() - 0.5) * 20);\n\nconsole.log(`Points: ${xs.length}`);\nconsole.log(`Mean Y: ${mean(ys).toFixed(2)}`);\nconsole.log(`Std Dev Y: ${standardDeviation(ys).toFixed(2)}`);"
+    },
+    {
+      "kind": "code",
+      "language": "bunbook-typescript",
+      "value": "// Compute linear regression\nconst pairs: [number, number][] = xs.map((x, i) => [x, ys[i]]);\nconst regression = linearRegression(pairs);\nconst predict = linearRegressionLine(regression);\n\nconsole.log(`Slope: ${regression.m.toFixed(3)}`);\nconsole.log(`Intercept: ${regression.b.toFixed(3)}`);"
+    },
+    {
+      "kind": "code",
+      "language": "bunbook-typescript",
+      "value": "// Plot the raw data and regression line\nconst regressionYs = xs.map(predict);\n\nPlotly.newPlot(\n  [\n    {\n      x: xs,\n      y: ys,\n      type: \"scatter\",\n      mode: \"markers\",\n      name: \"Data\",\n      marker: { size: 6, opacity: 0.6 },\n    },\n    {\n      x: xs,\n      y: regressionYs,\n      type: \"scatter\",\n      mode: \"lines\",\n      name: `y = ${regression.m.toFixed(2)}x + ${regression.b.toFixed(2)}`,\n      line: { color: \"red\", width: 2 },\n    },\n  ],\n  {\n    title: \"Linear Regression\",\n    xaxis: { title: \"x\" },\n    yaxis: { title: \"y\" },\n  }\n);"
+    },
+    {
+      "kind": "code",
+      "language": "bunbook-typescript",
+      "value": "// Plot residuals\nconst residuals = ys.map((y, i) => y - predict(xs[i]));\n\nPlotly.newPlot(\n  [\n    {\n      x: xs,\n      y: residuals,\n      type: \"bar\",\n      marker: {\n        color: residuals.map((r) => (r >= 0 ? \"steelblue\" : \"coral\")),\n      },\n    },\n  ],\n  {\n    title: \"Residuals\",\n    xaxis: { title: \"x\" },\n    yaxis: { title: \"residual\" },\n    showlegend: false,\n  }\n);"
+    }
+  ]
+}
