@@ -113,8 +113,8 @@ export class BunbookIntellisense {
       }))
     );
 
-    const syntactic = service.getSyntacticDiagnostics(VIRTUAL_FILE);
-    const semantic = service.getSemanticDiagnostics(VIRTUAL_FILE);
+    const syntactic = service.getSyntacticDiagnostics(host.virtualFile);
+    const semantic = service.getSemanticDiagnostics(host.virtualFile);
     const allDiags = [...syntactic, ...semantic];
 
     // Group diagnostics by cell
@@ -172,7 +172,8 @@ export class BunbookIntellisense {
     service: ts.LanguageService;
     host: VirtualLanguageServiceHost;
   } {
-    if (!this._service || !this._host) {
+    if (!this._service || !this._host || this._host.cwd !== cwd) {
+      this._service?.dispose();
       this._host = new VirtualLanguageServiceHost(cwd, this._extensionPath);
       this._service = ts.createLanguageService(
         this._host,
@@ -232,7 +233,7 @@ export class BunbookIntellisense {
     if (offset === undefined) return undefined;
 
     const completions = ctx.service.getCompletionsAtPosition(
-      VIRTUAL_FILE,
+      ctx.host.virtualFile,
       offset,
       {
         includeCompletionsForModuleExports: true,
@@ -281,7 +282,7 @@ export class BunbookIntellisense {
     if (!cellEntry) return undefined;
 
     const edits = ctx.service.getFormattingEditsForRange(
-      VIRTUAL_FILE,
+      ctx.host.virtualFile,
       cellEntry.start,
       cellEntry.start + cellEntry.length,
       formatSettings
@@ -324,7 +325,7 @@ export class BunbookIntellisense {
     );
     if (offset === undefined) return undefined;
 
-    const info = ctx.service.getQuickInfoAtPosition(VIRTUAL_FILE, offset);
+    const info = ctx.service.getQuickInfoAtPosition(ctx.host.virtualFile, offset);
     if (!info) return undefined;
 
     const display = ts.displayPartsToString(info.displayParts);
@@ -337,7 +338,8 @@ export class BunbookIntellisense {
   }
 }
 
-const VIRTUAL_FILE = "/___bunbook___.ts";
+// Virtual file name only — the host prepends cwd to get the full path
+const VIRTUAL_FILENAME = "___bunbook___.ts";
 
 // Ambient declarations for globals available in the worker
 const AMBIENT_DECLARATIONS = `
@@ -423,10 +425,14 @@ class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
   private _cellOffsets: { cellIndex: number; start: number; length: number }[] =
     [];
 
+  readonly virtualFile: string;
+
   constructor(
-    private readonly _cwd: string,
+    readonly cwd: string,
     private readonly _extensionPath: string
-  ) {}
+  ) {
+    this.virtualFile = path.join(cwd, VIRTUAL_FILENAME);
+  }
 
   getCompilationSettings(): ts.CompilerOptions {
     return {
@@ -440,23 +446,23 @@ class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
       types: ["bun-types"],
       typeRoots: [
         path.join(this._extensionPath, "node_modules"),
-        path.join(this._cwd, "node_modules"),
+        path.join(this.cwd, "node_modules"),
       ],
     };
   }
 
   getScriptFileNames(): string[] {
-    return [VIRTUAL_FILE, AMBIENT_FILE];
+    return [this.virtualFile, AMBIENT_FILE];
   }
 
   getScriptVersion(fileName: string): string {
-    if (fileName === VIRTUAL_FILE) return this._version.toString();
+    if (fileName === this.virtualFile) return this._version.toString();
     if (fileName === AMBIENT_FILE) return "1";
     return "0";
   }
 
   getScriptSnapshot(fileName: string): ts.IScriptSnapshot | undefined {
-    if (fileName === VIRTUAL_FILE) {
+    if (fileName === this.virtualFile) {
       return ts.ScriptSnapshot.fromString(this._content);
     }
     if (fileName === AMBIENT_FILE) {
@@ -469,7 +475,7 @@ class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
   }
 
   getCurrentDirectory(): string {
-    return this._cwd;
+    return this.cwd;
   }
 
   getDefaultLibFileName(options: ts.CompilerOptions): string {
@@ -478,12 +484,12 @@ class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
 
   fileExists(p: string): boolean {
     return (
-      p === VIRTUAL_FILE || p === AMBIENT_FILE || ts.sys.fileExists(p)
+      p === this.virtualFile || p === AMBIENT_FILE || ts.sys.fileExists(p)
     );
   }
 
   readFile(p: string): string | undefined {
-    if (p === VIRTUAL_FILE) return this._content;
+    if (p === this.virtualFile) return this._content;
     if (p === AMBIENT_FILE) return AMBIENT_DECLARATIONS;
     return ts.sys.readFile(p);
   }

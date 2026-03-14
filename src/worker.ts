@@ -20,10 +20,34 @@ const transpiler = new Bun.Transpiler({ loader: "ts" });
   },
 };
 
+// Resolve a module specifier to an absolute path if it's relative.
+function resolveImportPath(specifier: string): string {
+  const unquoted = specifier.slice(1, -1); // strip quotes
+  const quote = specifier[0];
+  if (unquoted.startsWith("./") || unquoted.startsWith("../")) {
+    const resolved = require("path").resolve(process.cwd(), unquoted);
+    return `${quote}${resolved}${quote}`;
+  }
+  return specifier;
+}
+
 // Rewrite const/let to var so declarations persist across evals on globalThis.
 // Also rewrite class Foo to var Foo = class Foo.
+// Also rewrite static imports to dynamic await import() so they work in eval.
 function rewriteDeclarations(code: string): string {
   return code
+    .replace(
+      /^import\s+(\{[^}]+\})\s+from\s+(['"][^'"]+['"])\s*;?$/gm,
+      (_, bindings, spec) => `var ${bindings} = await import(${resolveImportPath(spec)});`
+    )
+    .replace(
+      /^import\s+(\w+)\s+from\s+(['"][^'"]+['"])\s*;?$/gm,
+      (_, name, spec) => `var ${name} = (await import(${resolveImportPath(spec)})).default;`
+    )
+    .replace(
+      /^import\s+\*\s+as\s+(\w+)\s+from\s+(['"][^'"]+['"])\s*;?$/gm,
+      (_, name, spec) => `var ${name} = await import(${resolveImportPath(spec)});`
+    )
     .replace(/^(export\s+)?(const|let)\s+/gm, "var ")
     .replace(/^(export\s+)?class\s+(\w+)/gm, "var $2 = class $2");
 }
@@ -42,17 +66,28 @@ async function processCode(code: string) {
     // Transpile TS -> JS, then rewrite declarations for persistence
     const js = transpiler.transformSync(code);
     const rewritten = rewriteDeclarations(js);
-    // Indirect eval for global scope (var declarations persist on globalThis)
+    // Use indirect eval for global scope. Wrap in async IIFE to support
+    // top-level await and dynamic imports. Var declarations inside the IIFE
+    // are captured and assigned to globalThis so they persist across cells.
     const indirectEval = eval;
-    // If code uses await, wrap in async IIFE. Var declarations inside the IIFE
-    // won't leak to global scope, so we extract them and assign to globalThis.
-    if (/\bawait\b/.test(rewritten)) {
-      // For async code, assign vars to globalThis explicitly
-      const asyncWrapped = `(async () => {\n${rewritten}\n})()`;
-      await indirectEval(asyncWrapped);
-    } else {
-      indirectEval(rewritten);
-    }
+    // Extract var names to hoist to globalThis after the IIFE runs
+    const varNames: string[] = [];
+    rewritten.replace(/^var\s+(?:\{([^}]+)\}|(\w+))/gm, (_, destructured, simple) => {
+      if (simple) varNames.push(simple);
+      if (destructured) {
+        // Handle destructured: { a, b: c } -> extract a, c
+        destructured.split(",").forEach((part: string) => {
+          const name = part.includes(":") ? part.split(":").pop()!.trim() : part.trim();
+          if (name) varNames.push(name);
+        });
+      }
+      return "";
+    });
+    const hoistCode = varNames
+      .map((n) => `globalThis.${n} = ${n};`)
+      .join("\n");
+    const wrapped = `(async () => {\n${rewritten}\n${hoistCode}\n})()`;
+    await indirectEval(wrapped);
   } catch (err: any) {
     const msg = err?.stack ?? err?.message ?? String(err);
     console.error(msg);
