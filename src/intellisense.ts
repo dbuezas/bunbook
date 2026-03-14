@@ -12,7 +12,14 @@ export class BunbookIntellisense {
   private _service: ts.LanguageService | null = null;
   private _host: VirtualLanguageServiceHost | null = null;
 
+  private readonly _diagnostics: vscode.DiagnosticCollection;
+  private _debounceTimer: NodeJS.Timeout | null = null;
+
   constructor(private readonly _extensionPath: string) {
+    this._diagnostics =
+      vscode.languages.createDiagnosticCollection("bunbook-typescript");
+    this._disposables.push(this._diagnostics);
+
     this._disposables.push(
       vscode.languages.registerCompletionItemProvider(
         { scheme: "vscode-notebook-cell", language: "bunbook-typescript" },
@@ -32,11 +39,133 @@ export class BunbookIntellisense {
         }
       )
     );
+
+    this._disposables.push(
+      vscode.languages.registerDocumentFormattingEditProvider(
+        { scheme: "vscode-notebook-cell", language: "bunbook-typescript" },
+        {
+          provideDocumentFormattingEdits: (doc, options) =>
+            this._provideFormatting(doc, options),
+        }
+      )
+    );
+
+    // Update diagnostics on cell content changes
+    this._disposables.push(
+      vscode.workspace.onDidChangeTextDocument((e) => {
+        const notebook = vscode.workspace.notebookDocuments.find((nb) =>
+          nb.getCells().some(
+            (c) => c.document.uri.toString() === e.document.uri.toString()
+          )
+        );
+        if (notebook?.notebookType === "bunbook") {
+          this._debouncedDiagnostics(notebook);
+        }
+      })
+    );
+
+    // Update on cell structure changes (add/remove/reorder)
+    this._disposables.push(
+      vscode.workspace.onDidChangeNotebookDocument((e) => {
+        if (e.notebook.notebookType === "bunbook") {
+          this._debouncedDiagnostics(e.notebook);
+        }
+      })
+    );
+
+    // Clear diagnostics when notebook closes
+    this._disposables.push(
+      vscode.workspace.onDidCloseNotebookDocument((notebook) => {
+        if (notebook.notebookType === "bunbook") {
+          for (const cell of notebook.getCells()) {
+            this._diagnostics.delete(cell.document.uri);
+          }
+        }
+      })
+    );
   }
 
   dispose(): void {
+    if (this._debounceTimer) clearTimeout(this._debounceTimer);
     this._service?.dispose();
     for (const d of this._disposables) d.dispose();
+  }
+
+  private _debouncedDiagnostics(notebook: vscode.NotebookDocument): void {
+    if (this._debounceTimer) clearTimeout(this._debounceTimer);
+    this._debounceTimer = setTimeout(() => {
+      this._updateDiagnostics(notebook);
+    }, 500);
+  }
+
+  private _updateDiagnostics(notebook: vscode.NotebookDocument): void {
+    const cwd = path.dirname(notebook.uri.fsPath);
+    const { service, host } = this._ensureService(cwd);
+
+    const codeCells = notebook
+      .getCells()
+      .filter((c) => c.kind === vscode.NotebookCellKind.Code);
+
+    host.updateVirtualFile(
+      codeCells.map((c) => ({
+        text: c.document.getText(),
+        cellIndex: c.index,
+      }))
+    );
+
+    const syntactic = service.getSyntacticDiagnostics(VIRTUAL_FILE);
+    const semantic = service.getSemanticDiagnostics(VIRTUAL_FILE);
+    const allDiags = [...syntactic, ...semantic];
+
+    // Group diagnostics by cell
+    const diagsByCell = new Map<number, vscode.Diagnostic[]>();
+    for (const cell of codeCells) {
+      diagsByCell.set(cell.index, []);
+    }
+
+    for (const diag of allDiags) {
+      if (diag.start === undefined || diag.length === undefined) continue;
+
+      const cellPos = host.offsetToCellPosition(diag.start);
+      if (!cellPos) continue;
+
+      const cell = codeCells.find((c) => c.index === cellPos.cellIndex);
+      if (!cell) continue;
+
+      const startPos = cell.document.positionAt(cellPos.positionInCell);
+      const endPos = cell.document.positionAt(
+        cellPos.positionInCell + diag.length
+      );
+
+      const severity =
+        diag.category === ts.DiagnosticCategory.Error
+          ? vscode.DiagnosticSeverity.Error
+          : diag.category === ts.DiagnosticCategory.Warning
+          ? vscode.DiagnosticSeverity.Warning
+          : vscode.DiagnosticSeverity.Information;
+
+      const message = ts.flattenDiagnosticMessageText(
+        diag.messageText,
+        "\n"
+      );
+
+      const vsDiag = new vscode.Diagnostic(
+        new vscode.Range(startPos, endPos),
+        message,
+        severity
+      );
+      vsDiag.source = "bunbook";
+
+      diagsByCell.get(cell.index)?.push(vsDiag);
+    }
+
+    // Apply diagnostics per cell
+    for (const cell of codeCells) {
+      this._diagnostics.set(
+        cell.document.uri,
+        diagsByCell.get(cell.index) ?? []
+      );
+    }
   }
 
   private _ensureService(cwd: string): {
@@ -120,6 +249,66 @@ export class BunbookIntellisense {
       item.sortText = entry.sortText;
       return item;
     });
+  }
+
+  private _provideFormatting(
+    doc: vscode.TextDocument,
+    options: vscode.FormattingOptions
+  ): vscode.TextEdit[] | undefined {
+    const ctx = this._sync(doc);
+    if (!ctx) return undefined;
+
+    const formatSettings: ts.FormatCodeSettings = {
+      tabSize: options.tabSize,
+      indentSize: options.tabSize,
+      convertTabsToSpaces: options.insertSpaces,
+      newLineCharacter: "\n",
+      insertSpaceAfterCommaDelimiter: true,
+      insertSpaceAfterSemicolonInForStatements: true,
+      insertSpaceBeforeAndAfterBinaryOperators: true,
+      insertSpaceAfterKeywordsInControlFlowStatements: true,
+      insertSpaceAfterFunctionKeywordForAnonymousFunctions: true,
+      insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets: false,
+      insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis: false,
+      insertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces: false,
+      placeOpenBraceOnNewLineForFunctions: false,
+      placeOpenBraceOnNewLineForControlBlocks: false,
+      semicolons: ts.SemicolonPreference.Ignore,
+    };
+
+    // Get the range of just this cell within the virtual file
+    const cellEntry = ctx.host.getCellOffset(ctx.cellIndex);
+    if (!cellEntry) return undefined;
+
+    const edits = ctx.service.getFormattingEditsForRange(
+      VIRTUAL_FILE,
+      cellEntry.start,
+      cellEntry.start + cellEntry.length,
+      formatSettings
+    );
+
+    return edits
+      .map((edit) => {
+        const cellPos = ctx.host.offsetToCellPosition(edit.span.start);
+        if (!cellPos || cellPos.cellIndex !== ctx.cellIndex) return null;
+
+        const startPos = doc.positionAt(cellPos.positionInCell);
+        const endCellPos = ctx.host.offsetToCellPosition(
+          edit.span.start + edit.span.length
+        );
+        // If end falls outside this cell, clamp to end of cell
+        const endOffset =
+          endCellPos && endCellPos.cellIndex === ctx.cellIndex
+            ? endCellPos.positionInCell
+            : doc.getText().length;
+        const endPos = doc.positionAt(endOffset);
+
+        return vscode.TextEdit.replace(
+          new vscode.Range(startPos, endPos),
+          edit.newText
+        );
+      })
+      .filter((e): e is vscode.TextEdit => e !== null);
   }
 
   private _provideHover(
@@ -315,6 +504,14 @@ class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
     this._version++;
   }
 
+  getCellOffset(
+    cellIndex: number
+  ): { start: number; length: number } | undefined {
+    const entry = this._cellOffsets.find((o) => o.cellIndex === cellIndex);
+    if (!entry) return undefined;
+    return { start: entry.start, length: entry.length };
+  }
+
   cellPositionToOffset(
     cellIndex: number,
     posInCell: number
@@ -322,6 +519,20 @@ class VirtualLanguageServiceHost implements ts.LanguageServiceHost {
     const entry = this._cellOffsets.find((o) => o.cellIndex === cellIndex);
     if (!entry) return undefined;
     return entry.start + posInCell;
+  }
+
+  offsetToCellPosition(
+    offset: number
+  ): { cellIndex: number; positionInCell: number } | undefined {
+    for (const entry of this._cellOffsets) {
+      if (offset >= entry.start && offset < entry.start + entry.length) {
+        return {
+          cellIndex: entry.cellIndex,
+          positionInCell: offset - entry.start,
+        };
+      }
+    }
+    return undefined;
   }
 }
 
