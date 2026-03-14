@@ -2,7 +2,7 @@
 
 A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). Fast startup, shared state across cells, inline Plotly charts, and full TypeScript intellisense.
 
-[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=DavidBuezas.bunbook) | [Install in VS Code](vscode:extension/DavidBuezas.bunbook)
+[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=DavidBuezas.bunbook)
 
 ![BunBook screenshot](https://raw.githubusercontent.com/dbuezas/bunbook/main/screenshot.png)
 
@@ -32,10 +32,9 @@ A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). 
 Use `Plotly.newPlot()` to render interactive charts:
 
 ```typescript
-Plotly.newPlot(
-  [{ x: [1, 2, 3], y: [1, 4, 9], type: "scatter" }],
-  { title: "My Chart" }
-);
+Plotly.newPlot([{ x: [1, 2, 3], y: [1, 4, 9], type: "scatter" }], {
+  title: "My Chart",
+});
 ```
 
 The API matches [Plotly.js](https://plotly.com/javascript/) but without the first `element` parameter:
