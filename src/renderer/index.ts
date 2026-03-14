@@ -1,8 +1,9 @@
-import type { RendererContext } from "vscode-notebook-renderer";
+import type { ActivationFunction } from "vscode-notebook-renderer";
 
 interface PlotlyData {
   data: Array<Record<string, unknown>>;
   layout?: Record<string, unknown>;
+  config?: Record<string, unknown>;
 }
 
 declare const Plotly: {
@@ -10,7 +11,7 @@ declare const Plotly: {
     el: HTMLElement,
     data: PlotlyData["data"],
     layout?: PlotlyData["layout"],
-    config?: Record<string, unknown>
+    config?: PlotlyData["config"]
   ) => Promise<void>;
   Plots: {
     resize: (el: HTMLElement) => void;
@@ -33,29 +34,30 @@ function loadPlotly(): Promise<void> {
   return plotlyLoaded;
 }
 
-export async function activate(context: RendererContext<void>) {
-  context.onDidCreateOutput(async (event) => {
-    const { element, output, signal } = event;
-
+export const activate: ActivationFunction = (_context) => ({
+  async renderOutputItem(outputItem, element) {
     await loadPlotly();
 
-    const data: PlotlyData = output.json();
+    element.innerHTML = "";
+    const plotlyData: PlotlyData = outputItem.json();
     const container = document.createElement("div");
     container.style.width = "100%";
     container.style.minHeight = "400px";
     element.appendChild(container);
 
-    await Plotly.newPlot(container, data.data, data.layout ?? {}, {
-      responsive: true,
-    });
+    await Plotly.newPlot(
+      container,
+      plotlyData.data,
+      plotlyData.layout ?? {},
+      { responsive: true, ...plotlyData.config }
+    );
 
     const observer = new ResizeObserver(() => {
       Plotly.Plots.resize(container);
     });
     observer.observe(element);
-
-    signal?.addEventListener("abort", () => {
-      observer.disconnect();
-    });
-  });
-}
+  },
+  disposeOutputItem(_id) {
+    // cleanup handled by VS Code removing the element
+  },
+});

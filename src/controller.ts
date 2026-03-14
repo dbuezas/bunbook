@@ -13,7 +13,7 @@ const ERR_END = "___ERR_END___";
 export class BunbookController {
   private readonly _id = "bunbook-controller";
   private readonly _label = "TypeScript (bun)";
-  private readonly _supportedLanguages = ["typescript"];
+  private readonly _supportedLanguages = ["bunbook-typescript"];
   private readonly _controller: vscode.NotebookController;
   private _executionOrder = 0;
   private _worker: ChildProcess | null = null;

@@ -19,12 +19,12 @@ export class BunbookSerializer implements vscode.NotebookSerializer {
 
     let raw: RawNotebook;
     if (!text) {
-      raw = { cells: [{ kind: "code", language: "typescript", value: "" }] };
+      raw = { cells: [{ kind: "code", language: "bunbook-typescript", value: "" }] };
     } else {
       try {
         raw = JSON.parse(text);
       } catch {
-        raw = { cells: [{ kind: "code", language: "typescript", value: "" }] };
+        raw = { cells: [{ kind: "code", language: "bunbook-typescript", value: "" }] };
       }
     }
 
@@ -34,7 +34,7 @@ export class BunbookSerializer implements vscode.NotebookSerializer {
           ? vscode.NotebookCellKind.Markup
           : vscode.NotebookCellKind.Code;
       const language =
-        cell.kind === "markdown" ? "markdown" : cell.language ?? "typescript";
+        cell.kind === "markdown" ? "markdown" : cell.language ?? "bunbook-typescript";
       return new vscode.NotebookCellData(kind, cell.value, language);
     });
 

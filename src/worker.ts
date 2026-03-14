@@ -11,10 +11,13 @@ const EVAL_END = "___EVAL_END___";
 
 const transpiler = new Bun.Transpiler({ loader: "ts" });
 
-// Make display() available globally for Plotly support
-(globalThis as any).display = (plotlyData: { data: any[]; layout?: any }) => {
-  const json = JSON.stringify(plotlyData);
-  process.stdout.write("___PLOTLY_OUTPUT___" + json + "___END_PLOTLY___");
+// Provide Plotly.newPlot globally so cells can call it directly.
+// Instead of rendering, it serializes the data as a marker for the renderer.
+(globalThis as any).Plotly = {
+  newPlot(data: any[], layout?: any, config?: any) {
+    const json = JSON.stringify({ data, layout, config });
+    process.stdout.write("___PLOTLY_OUTPUT___" + json + "___END_PLOTLY___");
+  },
 };
 
 // Rewrite const/let to var so declarations persist across evals on globalThis.

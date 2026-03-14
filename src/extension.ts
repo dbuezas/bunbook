@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
 import { BunbookSerializer } from "./serializer";
 import { BunbookController } from "./controller";
+import { BunbookIntellisense } from "./intellisense";
 
 let controller: BunbookController;
+let intellisense: BunbookIntellisense;
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -21,6 +23,9 @@ export function activate(context: vscode.ExtensionContext) {
       controller.restart();
     })
   );
+
+  intellisense = new BunbookIntellisense(context.extensionUri.fsPath);
+  context.subscriptions.push({ dispose: () => intellisense.dispose() });
 }
 
 export function deactivate() {}

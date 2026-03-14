@@ -3,24 +3,8 @@
   "tasks": [
     {
       "type": "shell",
-      "command": "bun run watch",
-      "problemMatcher": [
-        {
-          "pattern": {
-            "regexp": ".",
-            "file": 1,
-            "location": 2,
-            "message": 3
-          },
-          "background": {
-            "activeOnStart": true,
-            "beginsPattern": ".",
-            "endsPattern": "Watching for changes..."
-          }
-        }
-      ],
-      "isBackground": true,
-      "label": "bun: watch",
+      "command": "bun run compile",
+      "label": "bun: compile",
       "group": {
         "kind": "build",
         "isDefault": true
