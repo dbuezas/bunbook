@@ -1,37 +1,179 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import * as fs from "fs";
-import * as os from "os";
-import { spawn } from "child_process";
+import { spawn, ChildProcess } from "child_process";
 import { parseOutput } from "./outputParser";
 
-const RUNTIME_HELPERS = `
-function display(plotlyData: { data: any[]; layout?: any }) {
-  const json = JSON.stringify(plotlyData);
-  process.stdout.write("___PLOTLY_OUTPUT___" + json + "___END_PLOTLY___");
-}
-`;
+const EVAL_START = "___EVAL_START___";
+const EVAL_END = "___EVAL_END___";
+const OUT_START = "___OUT_START___";
+const OUT_END = "___OUT_END___";
+const ERR_START = "___ERR_START___";
+const ERR_END = "___ERR_END___";
 
-export class TsNotebookController {
-  private readonly _id = "ts-notebook-controller";
+export class BunbookController {
+  private readonly _id = "bunbook-controller";
   private readonly _label = "TypeScript (bun)";
   private readonly _supportedLanguages = ["typescript"];
   private readonly _controller: vscode.NotebookController;
   private _executionOrder = 0;
+  private _worker: ChildProcess | null = null;
+  private _workerCwd: string | null = null;
+  private _workerReady: Promise<void> | null = null;
+  private _stdoutBuffer = "";
+  private _stderrBuffer = "";
+  private _pendingResolve:
+    | ((result: { stdout: string; stderr: string }) => void)
+    | null = null;
 
-  constructor() {
+  constructor(private readonly _extensionUri: vscode.Uri) {
     this._controller = vscode.notebooks.createNotebookController(
       this._id,
-      "ts-notebook",
+      "bunbook",
       this._label
     );
     this._controller.supportedLanguages = this._supportedLanguages;
     this._controller.supportsExecutionOrder = true;
     this._controller.executeHandler = this._executeAll.bind(this);
+    this._controller.interruptHandler = this._interrupt.bind(this);
   }
 
   dispose(): void {
+    this._killWorker();
     this._controller.dispose();
+  }
+
+  restart(): void {
+    this._killWorker();
+    this._executionOrder = 0;
+  }
+
+  private _interrupt(): void {
+    this._killWorker();
+    this._executionOrder = 0;
+  }
+
+  private _killWorker(): void {
+    if (this._worker) {
+      this._worker.kill("SIGTERM");
+      this._worker = null;
+      this._workerCwd = null;
+      this._workerReady = null;
+      this._stdoutBuffer = "";
+      this._stderrBuffer = "";
+      this._pendingResolve = null;
+    }
+  }
+
+  private _ensureWorker(cwd: string): Promise<void> {
+    if (this._worker && this._workerCwd === cwd && this._workerReady) {
+      return this._workerReady;
+    }
+
+    this._killWorker();
+
+    const workerPath = path.join(
+      this._extensionUri.fsPath,
+      "out",
+      "worker.ts"
+    );
+
+    this._workerReady = new Promise<void>((resolve) => {
+      this._worker = spawn("bun", ["run", workerPath], {
+        cwd,
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+
+      this._workerCwd = cwd;
+
+      const onReady = (data: Buffer) => {
+        const text = data.toString();
+        if (text.includes("___WORKER_READY___")) {
+          // Remove ready marker from buffer
+          this._stdoutBuffer = text.split("___WORKER_READY___").pop() ?? "";
+          resolve();
+        }
+      };
+
+      this._worker!.stdout!.once("data", onReady);
+
+      this._worker!.stdout!.on("data", (data: Buffer) => {
+        this._stdoutBuffer += data.toString();
+        this._tryResolve();
+      });
+
+      this._worker!.stderr!.on("data", (data: Buffer) => {
+        this._stderrBuffer += data.toString();
+        this._tryResolve();
+      });
+
+      this._worker!.on("exit", () => {
+        this._worker = null;
+        this._workerCwd = null;
+        this._workerReady = null;
+      });
+    });
+
+    return this._workerReady;
+  }
+
+  private _tryResolve(): void {
+    if (!this._pendingResolve) return;
+
+    const outStart = this._stdoutBuffer.indexOf(OUT_START);
+    const outEnd = this._stdoutBuffer.indexOf(OUT_END);
+    const errStart = this._stderrBuffer.indexOf(ERR_START);
+    const errEnd = this._stderrBuffer.indexOf(ERR_END);
+
+    if (outStart !== -1 && outEnd !== -1 && errStart !== -1 && errEnd !== -1) {
+      const stdout = this._stdoutBuffer.slice(
+        outStart + OUT_START.length,
+        outEnd
+      );
+      const stderr = this._stderrBuffer.slice(
+        errStart + ERR_START.length,
+        errEnd
+      );
+
+      this._stdoutBuffer = this._stdoutBuffer.slice(
+        outEnd + OUT_END.length
+      );
+      this._stderrBuffer = this._stderrBuffer.slice(
+        errEnd + ERR_END.length
+      );
+
+      const resolve = this._pendingResolve;
+      this._pendingResolve = null;
+      resolve({ stdout, stderr });
+    }
+  }
+
+  private async _eval(
+    code: string,
+    token: vscode.CancellationToken
+  ): Promise<{ stdout: string; stderr: string }> {
+    return new Promise((resolve, reject) => {
+      if (!this._worker?.stdin) {
+        reject(new Error("Worker not running"));
+        return;
+      }
+
+      this._pendingResolve = resolve;
+
+      const cancelDisposable = token.onCancellationRequested(() => {
+        this._pendingResolve = null;
+        this._killWorker();
+        reject(new Error("Execution cancelled."));
+      });
+
+      this._worker.stdin.write(EVAL_START + code + EVAL_END);
+
+      // Clean up cancel listener when resolved
+      const origResolve = this._pendingResolve;
+      this._pendingResolve = (result) => {
+        cancelDisposable.dispose();
+        origResolve(result);
+      };
+    });
   }
 
   private async _executeAll(
@@ -53,42 +195,13 @@ export class TsNotebookController {
     execution.executionOrder = ++this._executionOrder;
     execution.start(Date.now());
 
-    // Accumulate all code cells from 0..current cell index
-    const codeCells: string[] = [];
-    for (let i = 0; i < notebook.cellCount; i++) {
-      const c = notebook.cellAt(i);
-      if (c.kind === vscode.NotebookCellKind.Code) {
-        codeCells.push(c.document.getText());
-        if (c === cell) break;
-      }
-    }
-
-    const fullCode = RUNTIME_HELPERS + "\n" + codeCells.join("\n\n");
-
-    // Write to temp file
-    const tmpDir = os.tmpdir();
-    const tmpFile = path.join(tmpDir, `tsbook-${Date.now()}.mts`);
-
-    try {
-      fs.writeFileSync(tmpFile, fullCode, "utf-8");
-    } catch (err) {
-      execution.replaceOutput([
-        new vscode.NotebookCellOutput([
-          vscode.NotebookCellOutputItem.stderr(`Failed to write temp file: ${err}`),
-        ]),
-      ]);
-      execution.end(false, Date.now());
-      return;
-    }
-
     const notebookDir = path.dirname(notebook.uri.fsPath);
 
     try {
-      const { stdout, stderr, exitCode } = await this._runTsx(
-        tmpFile,
-        notebookDir,
-        execution.token
-      );
+      await this._ensureWorker(notebookDir);
+
+      const code = cell.document.getText();
+      const { stdout, stderr } = await this._eval(code, execution.token);
 
       const outputs = parseOutput(stdout);
 
@@ -101,72 +214,15 @@ export class TsNotebookController {
       }
 
       execution.replaceOutput(outputs);
-      execution.end(exitCode === 0, Date.now());
+      execution.end(true, Date.now());
     } catch (err: unknown) {
-      if (execution.token.isCancellationRequested) {
-        execution.replaceOutput([
-          new vscode.NotebookCellOutput([
-            vscode.NotebookCellOutputItem.stderr("Execution cancelled."),
-          ]),
-        ]);
-        execution.end(false, Date.now());
-      } else {
-        const message = err instanceof Error ? err.message : String(err);
-        execution.replaceOutput([
-          new vscode.NotebookCellOutput([
-            vscode.NotebookCellOutputItem.stderr(message),
-          ]),
-        ]);
-        execution.end(false, Date.now());
-      }
-    } finally {
-      try {
-        fs.unlinkSync(tmpFile);
-      } catch {
-        // ignore cleanup errors
-      }
+      const message = err instanceof Error ? err.message : String(err);
+      execution.replaceOutput([
+        new vscode.NotebookCellOutput([
+          vscode.NotebookCellOutputItem.stderr(message),
+        ]),
+      ]);
+      execution.end(false, Date.now());
     }
-  }
-
-  private _runTsx(
-    filePath: string,
-    cwd: string,
-    token: vscode.CancellationToken
-  ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    return new Promise((resolve, reject) => {
-      const child = spawn("bun", ["run", filePath], {
-        cwd,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-
-      let stdout = "";
-      let stderr = "";
-
-      child.stdout.on("data", (data: Buffer) => {
-        stdout += data.toString();
-      });
-
-      child.stderr.on("data", (data: Buffer) => {
-        stderr += data.toString();
-      });
-
-      const cancelDisposable = token.onCancellationRequested(() => {
-        child.kill("SIGTERM");
-      });
-
-      child.on("close", (code) => {
-        cancelDisposable.dispose();
-        if (token.isCancellationRequested) {
-          reject(new Error("Execution cancelled."));
-        } else {
-          resolve({ stdout, stderr, exitCode: code ?? 1 });
-        }
-      });
-
-      child.on("error", (err) => {
-        cancelDisposable.dispose();
-        reject(err);
-      });
-    });
   }
 }

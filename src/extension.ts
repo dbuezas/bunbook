@@ -1,20 +1,26 @@
 import * as vscode from "vscode";
-import { TsNotebookSerializer } from "./serializer";
-import { TsNotebookController } from "./controller";
+import { BunbookSerializer } from "./serializer";
+import { BunbookController } from "./controller";
 
-let controller: TsNotebookController;
+let controller: BunbookController;
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.workspace.registerNotebookSerializer(
-      "ts-notebook",
-      new TsNotebookSerializer(),
+      "bunbook",
+      new BunbookSerializer(),
       { transientOutputs: true }
     )
   );
 
-  controller = new TsNotebookController();
+  controller = new BunbookController(context.extensionUri);
   context.subscriptions.push({ dispose: () => controller.dispose() });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("bunbook.restartKernel", () => {
+      controller.restart();
+    })
+  );
 }
 
 export function deactivate() {}

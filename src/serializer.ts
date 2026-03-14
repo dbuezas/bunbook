@@ -10,7 +10,7 @@ interface RawNotebook {
   cells: RawCell[];
 }
 
-export class TsNotebookSerializer implements vscode.NotebookSerializer {
+export class BunbookSerializer implements vscode.NotebookSerializer {
   deserializeNotebook(
     content: Uint8Array,
     _token: vscode.CancellationToken

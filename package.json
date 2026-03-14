@@ -1,6 +1,6 @@
 {
-  "name": "ts-notebook",
-  "displayName": "TypeScript Notebook",
+  "name": "bunbook",
+  "displayName": "BunBook",
   "description": "Run TypeScript as a native VS Code notebook with Plotly support",
   "version": "0.0.1",
   "engines": {
@@ -14,18 +14,35 @@
   "contributes": {
     "notebooks": [
       {
-        "type": "ts-notebook",
+        "type": "bunbook",
         "displayName": "TypeScript Notebook",
         "selector": [
           {
-            "filenamePattern": "*.tsbook"
+            "filenamePattern": "*.bunbook"
           }
         ]
       }
     ],
+    "commands": [
+      {
+        "command": "bunbook.restartKernel",
+        "title": "Restart Kernel",
+        "shortTitle": "Restart",
+        "icon": "$(debug-restart)"
+      }
+    ],
+    "menus": {
+      "notebook/toolbar": [
+        {
+          "command": "bunbook.restartKernel",
+          "group": "navigation/execute",
+          "when": "notebookType == 'bunbook'"
+        }
+      ]
+    },
     "notebookRenderer": [
       {
-        "id": "ts-notebook-plotly-renderer",
+        "id": "bunbook-plotly-renderer",
         "displayName": "Plotly Renderer",
         "entrypoint": "./out/renderer/index.js",
         "mimeTypes": [
@@ -35,15 +52,14 @@
     ]
   },
   "scripts": {
-    "compile": "bun esbuild.mjs",
-    "watch": "bun esbuild.mjs --watch",
-    "package": "bun esbuild.mjs --production"
+    "compile": "bun build.ts",
+    "watch": "bun build.ts --watch",
+    "package": "bun build.ts --production"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
-    "esbuild": "^0.24.0",
     "typescript": "^5.3.0"
   }
 }
