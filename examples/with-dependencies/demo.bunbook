@@ -2,7 +2,7 @@
   "cells": [
     {
       "kind": "markdown",
-      "value": "# Statistics + Plotly Demo\n\nThis notebook shows how to use local files and npm dependencies with BunBook.\nThe first cell runs `bun install` for you.\n"
+      "value": "# Statistics + Plotly Demo\n\nThis notebook shows how to use local files and npm dependencies with BunBook.\n\nA `package.json` is only needed when your notebook imports npm packages or you want Bun type support in external `.ts` files (via `@types/bun`). Simple notebooks like the hello-world and plots examples work without one.\n\nThe first cell runs `bun install` for you.\n"
     },
     {
       "kind": "code",

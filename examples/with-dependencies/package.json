@@ -2,6 +2,7 @@
   "name": "bunbook-with-dependencies",
   "private": true,
   "dependencies": {
+    "@types/bun": "^1.3.10",
     "simple-statistics": "^7.8.9"
   }
 }

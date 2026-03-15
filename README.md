@@ -54,7 +54,11 @@ const data = [1, 2, 3, 4, 5];
 console.log(mean(data));
 ```
 
-See `samples/with-dependencies/` for a full example with linear regression and Plotly charts.
+## Examples
+
+- [`examples/hello-world/`](examples/hello-world/) — minimal notebook, no setup needed
+- [`examples/plots/`](examples/plots/) — Plotly charts with shared state across cells
+- [`examples/with-dependencies/`](examples/with-dependencies/) — npm dependencies, local file imports, and linear regression with Plotly
 
 ## Development
 
