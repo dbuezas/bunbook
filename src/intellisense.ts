@@ -78,6 +78,15 @@ export class BunbookIntellisense {
       )
     );
 
+    this._disposables.push(
+      vscode.languages.registerDefinitionProvider(
+        { scheme: "vscode-notebook-cell", language: "bunbook-typescript" },
+        {
+          provideDefinition: (doc, pos) => this._provideDefinition(doc, pos),
+        }
+      )
+    );
+
     // Update diagnostics on cell content changes
     this._disposables.push(
       vscode.workspace.onDidChangeTextDocument((e) => {
@@ -364,6 +373,65 @@ export class BunbookIntellisense {
     if (docs) md.appendText(docs);
 
     return new vscode.Hover(md);
+  }
+
+  private _provideDefinition(
+    doc: vscode.TextDocument,
+    pos: vscode.Position
+  ): vscode.Location | vscode.Location[] | undefined {
+    const ctx = this._sync(doc);
+    if (!ctx) return undefined;
+
+    const offset = ctx.host.cellPositionToOffset(
+      ctx.cellIndex,
+      doc.offsetAt(pos)
+    );
+    if (offset === undefined) return undefined;
+
+    const defs = ctx.service.getDefinitionAtPosition(
+      ctx.host.virtualFile,
+      offset
+    );
+    if (!defs || defs.length === 0) return undefined;
+
+    const notebook = vscode.workspace.notebookDocuments.find((nb) =>
+      nb.getCells().some((c) => c.document.uri.toString() === doc.uri.toString())
+    );
+
+    return defs
+      .map((def) => {
+        // Definition is inside the virtual file → map back to the notebook cell
+        if (def.fileName === ctx.host.virtualFile && notebook) {
+          const cellPos = ctx.host.offsetToCellPosition(def.textSpan.start);
+          if (!cellPos) return null;
+          const cell = notebook.getCells().find((c) => c.index === cellPos.cellIndex);
+          if (!cell) return null;
+          const startPos = cell.document.positionAt(cellPos.positionInCell);
+          return new vscode.Location(cell.document.uri, startPos);
+        }
+        // Definition is in an external file (node_modules, etc.)
+        const uri = vscode.Uri.file(def.fileName);
+        const startPos = new vscode.Position(0, 0);
+        // Read the file to compute proper position from the offset
+        if (ts.sys.fileExists(def.fileName)) {
+          const content = ts.sys.readFile(def.fileName);
+          if (content) {
+            let line = 0;
+            let col = 0;
+            for (let i = 0; i < def.textSpan.start && i < content.length; i++) {
+              if (content[i] === "\n") {
+                line++;
+                col = 0;
+              } else {
+                col++;
+              }
+            }
+            return new vscode.Location(uri, new vscode.Position(line, col));
+          }
+        }
+        return new vscode.Location(uri, startPos);
+      })
+      .filter((loc): loc is vscode.Location => loc !== null);
   }
 }
 
