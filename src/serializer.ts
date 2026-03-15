@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 interface RawCell {
   kind: "code" | "markdown";
   language?: string;
-  value: string;
+  value: string | string[];
 }
 
 interface RawNotebook {
@@ -35,7 +35,8 @@ export class BunbookSerializer implements vscode.NotebookSerializer {
           : vscode.NotebookCellKind.Code;
       const language =
         cell.kind === "markdown" ? "markdown" : cell.language ?? "bunbook-typescript";
-      return new vscode.NotebookCellData(kind, cell.value, language);
+      const value = Array.isArray(cell.value) ? cell.value.join("\n") : cell.value;
+      return new vscode.NotebookCellData(kind, value, language);
     });
 
     return new vscode.NotebookData(cells);
@@ -47,13 +48,14 @@ export class BunbookSerializer implements vscode.NotebookSerializer {
   ): Uint8Array {
     const raw: RawNotebook = {
       cells: data.cells.map((cell) => {
+        const lines = cell.value.split("\n");
         if (cell.kind === vscode.NotebookCellKind.Markup) {
-          return { kind: "markdown", value: cell.value };
+          return { kind: "markdown" as const, value: lines };
         }
         return {
-          kind: "code",
+          kind: "code" as const,
           language: cell.languageId,
-          value: cell.value,
+          value: lines,
         };
       }),
     };

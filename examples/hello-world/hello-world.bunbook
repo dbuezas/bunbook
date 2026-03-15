@@ -3,7 +3,17 @@
     {
       "kind": "code",
       "language": "bunbook-typescript",
-      "value": "await Bun.$`echo Hello bash!`\nconsole.log(\"Hello console!\")\nconsole.table({\n  Hello: \"world!\",\n  \"Bun version\": Bun.version,\n  OS: process.platform,\n  Architecture: process.arch,\n  \"Working directory\": process.cwd(),\n})"
+      "value": [
+        "await Bun.$`echo Hello bash!`",
+        "console.log(\"Hello console!\")",
+        "console.table({",
+        "  Hello: \"world!\",",
+        "  \"Bun version\": Bun.version,",
+        "  OS: process.platform,",
+        "  Architecture: process.arch,",
+        "  \"Working directory\": process.cwd(),",
+        "})"
+      ]
     }
   ]
 }

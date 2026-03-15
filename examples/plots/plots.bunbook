@@ -2,22 +2,62 @@
   "cells": [
     {
       "kind": "markdown",
-      "value": "# BunBook Demo\n\nThis notebook demonstrates running TypeScript cells with shared state and Plotly charts.\n"
+      "value": [
+        "# BunBook Demo",
+        "",
+        "This notebook demonstrates running TypeScript cells with shared state and Plotly charts."
+      ]
     },
     {
       "kind": "code",
       "language": "bunbook-typescript",
-      "value": "const greeting = \"Hello from BunBook!\";\nconsole.log(greeting);\nconsole.log(`Running on Bun ${Bun.version}`);"
+      "value": [
+        "const greeting = \"Hello from BunBook!\";",
+        "console.log(greeting);",
+        "console.log(`Running on Bun ${Bun.version}`);"
+      ]
     },
     {
       "kind": "code",
       "language": "bunbook-typescript",
-      "value": "// This cell can access variables from the previous cell\nconsole.log(`Previous greeting was: ${greeting}`);\n\nconst numbers = [1, 2, 3, 4, 5];\nconst sum = numbers.reduce((a, b) => a + b, 0);\nconsole.log(`Sum of ${numbers} = ${sum}`);"
+      "value": [
+        "// This cell can access variables from the previous cell",
+        "console.log(`Previous greeting was: ${greeting}`);",
+        "",
+        "const numbers = [1, 2, 3, 4, 5];",
+        "const sum = numbers.reduce((a, b) => a + b, 0);",
+        "console.log(`Sum of ${numbers} = ${sum}`);"
+      ]
     },
     {
       "kind": "code",
       "language": "bunbook-typescript",
-      "value": "// Render a Plotly chart inline\nPlotly.newPlot(\n  [\n    {\n      x: [1, 2, 3, 4, 5],\n      y: [1, 4, 9, 16, 25],\n      type: \"scatter\",\n      mode: \"lines+markers\",\n      name: \"x²\",\n    },\n    {\n      x: [1, 2, 3, 4, 5],\n      y: [1, 8, 27, 64, 125],\n      type: \"scatter\",\n      mode: \"lines+markers\",\n      name: \"x³\",\n    },\n  ],\n  {\n    title: \"Power Functions\",\n    xaxis: { title: \"x\" },\n    yaxis: { title: \"y\" },\n  }\n);"
+      "value": [
+        "// Render a Plotly chart inline",
+        "Plotly.newPlot(",
+        "  [",
+        "    {",
+        "      x: [1, 2, 3, 4, 5],",
+        "      y: [1, 4, 9, 16, 25],",
+        "      type: \"scatter\",",
+        "      mode: \"lines+markers\",",
+        "      name: \"x²\",",
+        "    },",
+        "    {",
+        "      x: [1, 2, 3, 4, 5],",
+        "      y: [1, 8, 27, 64, 125],",
+        "      type: \"scatter\",",
+        "      mode: \"lines+markers\",",
+        "      name: \"x³\",",
+        "    },",
+        "  ],",
+        "  {",
+        "    title: \"Power Functions\",",
+        "    xaxis: { title: \"x\" },",
+        "    yaxis: { title: \"y\" },",
+        "  }",
+        ");"
+      ]
     }
   ]
 }
