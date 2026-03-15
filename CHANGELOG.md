@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.6
+
+- Replaced regex-based code transformations with proper AST parsing (acorn + astring), fixing edge cases with keywords inside strings, multi-line destructuring, and mixed imports like `import foo, { bar } from "mod"`
+- Added go-to-definition (Cmd+Click) for functions, variables, and imports across notebook cells and into external files
+- Added "BunBook Worker" output channel for debugging worker startup and runtime errors
+- Worker now fails fast with an error message instead of hanging when it can't start
+- Reduced vsix size by excluding examples directory and bundling acorn/astring at build time
+
 ## 0.0.5
 
 - Fixed named imports with `as` renaming (e.g. `import { foo as bar }`)
