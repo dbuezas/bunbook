@@ -134,6 +134,13 @@ export class BunbookController {
         this._tryResolve(state);
       });
 
+      state.worker.on("error", (err) => {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          this._workers.delete(key);
+          reject(new Error("Bun not found"));
+        }
+      });
+
       state.worker.on("exit", (code) => {
         this._outputChannel.appendLine(`[worker] exited with code ${code}`);
         this._workers.delete(key);
@@ -246,6 +253,20 @@ export class BunbookController {
       execution.end(true, Date.now());
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
+      if (message === "Bun not found") {
+        const installCmd = process.platform === "win32"
+          ? "powershell -c \"irm bun.sh/install.ps1 | iex\""
+          : "curl -fsSL https://bun.sh/install | bash";
+        const action = await vscode.window.showErrorMessage(
+          `Bun is not installed. It is required to run BunBook cells. Will run: ${installCmd}`,
+          "Install Bun"
+        );
+        if (action === "Install Bun") {
+          const terminal = vscode.window.createTerminal("Install Bun");
+          terminal.show();
+          terminal.sendText(installCmd);
+        }
+      }
       execution.replaceOutput([
         new vscode.NotebookCellOutput([
           vscode.NotebookCellOutputItem.stderr(message),
