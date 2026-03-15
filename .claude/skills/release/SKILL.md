@@ -23,6 +23,10 @@ Use when the user types /release. Bumps the package version, updates the changel
 
 ## Important
 
+- The changelog file is `CHANGELOG.md` (uppercase). Do NOT create or edit `changelog.md` (lowercase).
+- Both `package.json` and `CHANGELOG.md` must be in a single commit. Never commit one without the other.
+- Stage both files explicitly by name: `git add package.json CHANGELOG.md`.
+- The commit and tag must happen in one command chain: `git add ... && git commit -m "v<version>" && git tag v<version>`.
 - Follow the existing CHANGELOG.md format exactly (see existing entries for style).
 - Do NOT include the `Co-Authored-By` trailer in the commit message for this skill.
 - The tag format is `v<version>` (e.g. `v0.0.6`).
