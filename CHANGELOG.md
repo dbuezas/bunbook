@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.7
+
+- `.bunbook` files now store cell values as line arrays instead of single strings, producing cleaner git diffs
+- Improved example notebooks with more demonstrations and better organization
+
 ## 0.0.6
 
 - Replaced regex-based code transformations with proper AST parsing (acorn + astring), fixing edge cases with keywords inside strings, multi-line destructuring, and mixed imports like `import foo, { bar } from "mod"`
