@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.8
+
+- Prompt to install Bun when not found, with a one-click terminal install (supports macOS/Linux and Windows)
+- Added GitHub Actions workflow for automated marketplace publishing on tag push
+- Added `publish` script for CI to ensure the extension is built before publishing
+
 ## 0.0.7
 
 - `.bunbook` files now store cell values as line arrays instead of single strings, producing cleaner git diffs
