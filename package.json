@@ -87,7 +87,8 @@
     "vscode:prepublish": "node -e \"\" ",
     "compile": "bun build.ts",
     "start": "rm -f bunbook-*.vsix && bun run package && code --install-extension bunbook-*.vsix",
-    "package": "bun build.ts --production && rm -rf node_modules && bun install --production && bunx @vscode/vsce package && bun install"
+    "package": "bun build.ts --production && rm -rf node_modules && bun install --production && bunx @vscode/vsce package && bun install",
+    "publish": "bun build.ts --production && rm -rf node_modules && bun install --production && bunx @vscode/vsce publish"
   },
   "dependencies": {
     "@types/bun": "^1.3.10"
