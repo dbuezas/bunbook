@@ -21,6 +21,8 @@ Use when the user types /release. Bumps the package version, updates the changel
 
 6. **Build the vsix**: Run `bun start` to build, package, and install the extension locally.
 
+7. **Push to remote**: Run `git push && git push --tags` to push the commit and tag, triggering the GitHub Actions publish workflow.
+
 ## Important
 
 - The changelog file is `CHANGELOG.md` (uppercase). Do NOT create or edit `changelog.md` (lowercase).
