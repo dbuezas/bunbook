@@ -28,8 +28,10 @@ export class BunbookController {
   private readonly _controller: vscode.NotebookController;
   private _executionOrder = 0;
   private readonly _workers = new Map<string, WorkerState>();
+  private readonly _outputChannel: vscode.OutputChannel;
 
   constructor(private readonly _extensionUri: vscode.Uri) {
+    this._outputChannel = vscode.window.createOutputChannel("BunBook Worker");
     this._controller = vscode.notebooks.createNotebookController(
       this._id,
       "bunbook",
@@ -46,6 +48,7 @@ export class BunbookController {
       this._killWorker(key);
     }
     this._controller.dispose();
+    this._outputChannel.dispose();
   }
 
   restart(notebook?: vscode.NotebookDocument): void {
@@ -102,9 +105,10 @@ export class BunbookController {
 
     let ready = false;
 
-    state.ready = new Promise<void>((resolve) => {
+    state.ready = new Promise<void>((resolve, reject) => {
       state.worker.stdout!.on("data", (data: Buffer) => {
         const text = data.toString();
+        this._outputChannel.append(`[stdout] ${text}`);
         if (!ready) {
           const idx = text.indexOf("___WORKER_READY___");
           if (idx !== -1) {
@@ -124,12 +128,18 @@ export class BunbookController {
       });
 
       state.worker.stderr!.on("data", (data: Buffer) => {
-        state.stderrBuffer += data.toString();
+        const text = data.toString();
+        this._outputChannel.append(`[stderr] ${text}`);
+        state.stderrBuffer += text;
         this._tryResolve(state);
       });
 
-      state.worker.on("exit", () => {
+      state.worker.on("exit", (code) => {
+        this._outputChannel.appendLine(`[worker] exited with code ${code}`);
         this._workers.delete(key);
+        if (!ready) {
+          reject(new Error(`Worker exited with code ${code} before becoming ready. Check "BunBook Worker" output for details.`));
+        }
       });
     });
 

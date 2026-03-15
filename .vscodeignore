@@ -5,7 +5,10 @@ esbuild.mjs
 **/*.map
 out/**/*.ts
 !out/worker.ts
+!out/transformCode.js
 samples/**
+examples/**
+changelog.md
 build.ts
 bun.lock
 .gitignore

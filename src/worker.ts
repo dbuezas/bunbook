@@ -6,6 +6,8 @@
 // to var (which persists on globalThis in indirect eval) and use Bun.Transpiler
 // to convert TypeScript to JavaScript before eval.
 
+import { transformDeclarations, extractVarNames } from "./transformCode.js";
+
 const EVAL_START = "___EVAL_START___";
 const EVAL_END = "___EVAL_END___";
 
@@ -23,45 +25,16 @@ const transpiler = new Bun.Transpiler({ loader: "ts" });
 
 // Resolve a module specifier to an absolute path from the notebook's cwd.
 function resolveImportPath(specifier: string): string {
-  const unquoted = specifier.slice(1, -1); // strip quotes
-  const quote = specifier[0];
   try {
-    const resolved = Bun.resolveSync(unquoted, process.cwd());
-    return `${quote}${resolved}${quote}`;
+    return Bun.resolveSync(specifier, process.cwd());
   } catch {
     return specifier;
   }
 }
 
-// Rewrite const/let to var so declarations persist across evals on globalThis.
-// Also rewrite class Foo to var Foo = class Foo.
-// Also rewrite static imports to dynamic await import() so they work in eval.
-function rewriteDeclarations(code: string): string {
+// Replace import.meta references which are not valid in eval context.
+function replaceImportMeta(code: string): string {
   return code
-    .replace(
-      /^import\s+(\{[^}]+\})\s+from\s+(['"][^'"]+['"])\s*;?$/gm,
-      (_, bindings, spec) => {
-        // Convert import-style "as" to destructuring-style ":"
-        // e.g. { foo as bar } -> { foo: bar }
-        const destructured = bindings.replace(/\bas\b/g, ":");
-        return `var ${destructured} = await import(${resolveImportPath(spec)});`;
-      }
-    )
-    .replace(
-      /^import\s+(\w+)\s+from\s+(['"][^'"]+['"])\s*;?$/gm,
-      (_, name, spec) => `var ${name} = (await import(${resolveImportPath(spec)})).default;`
-    )
-    .replace(
-      /^import\s+\*\s+as\s+(\w+)\s+from\s+(['"][^'"]+['"])\s*;?$/gm,
-      (_, name, spec) => `var ${name} = await import(${resolveImportPath(spec)});`
-    )
-    .replace(/^import\s+(['"][^'"]+['"])\s*;?$/gm, "")
-    .replace(/^(export\s+)?(const|let)\s+/gm, "var ")
-    .replace(/^(export\s+)?class\s+(\w+)/gm, "var $2 = class $2")
-    .replace(/^(export\s+)?(async\s+)?function\s+(\w+)/gm, (_, _exp, async_, name) =>
-      `var ${name} = ${async_ ?? ""}function ${name}`
-    )
-    // import.meta is not valid in eval context; replace with Bun equivalents
     .replace(/\bimport\.meta\.dir\b/g, "process.cwd()")
     .replace(/\bimport\.meta\.file\b/g, "__filename")
     .replace(/\bimport\.meta\.url\b/g, `"file://" + process.cwd() + "/"`)
@@ -92,28 +65,21 @@ async function processCode(code: string) {
   try {
     // Transpile TS -> JS, then rewrite declarations for persistence
     const js = transpiler.transformSync(code);
-    const rewritten = rewriteDeclarations(js);
+    const rewritten = transformDeclarations(js, resolveImportPath);
+    // Replace import.meta after AST transform (string-level is fine here)
+    const final = replaceImportMeta(rewritten);
+
     // Use indirect eval for global scope. Wrap in async IIFE to support
     // top-level await and dynamic imports. Var declarations inside the IIFE
     // are captured and assigned to globalThis so they persist across cells.
     const indirectEval = eval;
+
     // Extract var names to hoist to globalThis after the IIFE runs
-    const varNames: string[] = [];
-    rewritten.replace(/^var\s+(?:\{([^}]+)\}|(\w+))/gm, (_, destructured, simple) => {
-      if (simple) varNames.push(simple);
-      if (destructured) {
-        // Handle destructured: { a, b: c } -> extract a, c
-        destructured.split(",").forEach((part: string) => {
-          const name = part.includes(":") ? part.split(":").pop()!.trim() : part.trim();
-          if (name) varNames.push(name);
-        });
-      }
-      return "";
-    });
+    const varNames = extractVarNames(final);
     const hoistCode = varNames
       .map((n) => `globalThis.${n} = ${n};`)
       .join("\n");
-    const wrapped = `(async () => {\n${rewritten}\n${hoistCode}\n})()`;
+    const wrapped = `(async () => {\n${final}\n${hoistCode}\n})()`;
     await indirectEval(wrapped);
   } catch (err: any) {
     const msg = err?.stack ?? err?.message ?? String(err);

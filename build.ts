@@ -1,4 +1,4 @@
-import { watch } from "fs";
+import { watch, unlinkSync } from "fs";
 import { join } from "path";
 
 const args = process.argv.slice(2);
@@ -28,10 +28,24 @@ async function build() {
     }),
   ]);
 
+  // Bundle transformCode with acorn+astring inlined so the worker doesn't need node_modules
+  const transformCode = await Bun.build({
+    entrypoints: ["src/transformCode.ts"],
+    outdir: "out",
+    format: "esm",
+    target: "node",
+    sourcemap: production ? "none" : "linked",
+    minify: production,
+    naming: "transformCode.js",
+  });
+
+  // Clean up stale file that Bun would prefer over .js
+  try { unlinkSync("out/transformCode.ts"); } catch {}
+
   // Copy worker.ts as-is (Bun runs it directly, no bundling needed)
   await Bun.write("out/worker.ts", Bun.file("src/worker.ts"));
 
-  const results = [extension, renderer];
+  const results = [extension, renderer, transformCode];
   const errors = results.flatMap((r) =>
     r.logs.filter((l) => l.level === "error")
   );
