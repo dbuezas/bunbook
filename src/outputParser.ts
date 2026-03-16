@@ -2,6 +2,24 @@ import * as vscode from "vscode";
 
 const PLOTLY_START = "___PLOTLY_OUTPUT___";
 const PLOTLY_END = "___END_PLOTLY___";
+const PLOTLY_CDN = "https://cdn.plot.ly/plotly-2.35.2.min.js";
+let plotlyOutputId = 0;
+
+function plotlyHtml(jsonStr: string): string {
+  const id = `plotly-${Date.now()}-${plotlyOutputId++}`;
+  return `<div id="${id}"></div>
+<script type="text/javascript">
+(function() {
+  var d = ${jsonStr};
+  function render() { Plotly.newPlot("${id}", d.data, d.layout || {}, d.config || {}); }
+  if (typeof Plotly !== "undefined") { render(); return; }
+  var s = document.createElement("script");
+  s.src = "${PLOTLY_CDN}";
+  s.onload = render;
+  document.head.appendChild(s);
+})();
+</script>`;
+}
 
 export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
   const outputs: vscode.NotebookCellOutput[] = [];
@@ -57,6 +75,10 @@ export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
           vscode.NotebookCellOutputItem.json(
             plotlyData,
             "application/vnd.plotly+json"
+          ),
+          vscode.NotebookCellOutputItem.text(
+            plotlyHtml(jsonStr),
+            "text/html"
           ),
         ])
       );
