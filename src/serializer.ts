@@ -67,7 +67,29 @@ export class BunbookSerializer implements vscode.NotebookSerializer {
       return this._emptyNotebook();
     }
 
+    // Legacy .bunbook format: { cells: [{ kind, language, value }] }
+    if (Array.isArray(json.cells) && json.cells[0]?.kind !== undefined) {
+      return this._deserializeLegacy(json.cells);
+    }
+
     return this._deserializeIpynb(json as IpynbNotebook);
+  }
+
+  private _deserializeLegacy(
+    cells: Array<{ kind: string; language?: string; value: string }>
+  ): vscode.NotebookData {
+    return new vscode.NotebookData(
+      cells.map(
+        (cell) =>
+          new vscode.NotebookCellData(
+            cell.kind === "markdown"
+              ? vscode.NotebookCellKind.Markup
+              : vscode.NotebookCellKind.Code,
+            cell.value,
+            cell.language ?? "typescript"
+          )
+      )
+    );
   }
 
   private _emptyNotebook(): vscode.NotebookData {
