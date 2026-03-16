@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.9
+
+- **Standard `.ipynb` format** — notebooks now use the Jupyter `.ipynb` format instead of the custom `.bunbook` format. Existing `.bunbook` files are still supported and silently migrated on save.
+- **Jupyter kernel picker** — BunBook registers as "TypeScript (Bun)" in the standard Jupyter kernel picker, so any `.ipynb` file can use it.
+- **Output persistence toggle** — toolbar button to switch between saving outputs to file (`foo.ipynb`) and stripping them for cleaner diffs (`foo.no-output.ipynb`). Unsaved edits are preserved across toggles.
+- **Plotly renderer improvements** — custom MIME type (`application/vnd.bunbook.plotly`) stores chart data as compact single-line JSON instead of pretty-printed, significantly reducing file size. Non-VS Code viewers (GitHub, nbviewer) see a fallback message linking to the extension.
+- **Intellisense across notebook types** — completions, hover, formatting, go-to-definition, and diagnostics now work in both `.no-output.ipynb` and standard `.ipynb` files.
+- **Worker lifecycle** — workers are properly killed when notebooks close or when toggling output persistence. Restart button only appears when a worker is running.
+- Removed custom language grammar and "Create: New BunBook Notebook" command (no longer needed with standard `.ipynb`)
+- Cleaned up packaged extension: removed stale files (syntaxes, language-configuration, .github workflows)
+
 ## 0.0.8
 
 - Prompt to install Bun when not found, with a one-click terminal install (supports macOS/Linux and Windows)
