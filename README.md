@@ -29,12 +29,14 @@ A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). 
 3. Write TypeScript in code cells
 4. Run cells with `Shift+Enter` or the play button
 
-## Two ways to open `.ipynb` files
+## Output Persistence Toggle
 
-When opening a `.ipynb` file, VS Code may ask which editor to use:
+Use the toolbar toggle to control whether cell outputs are saved to the file:
 
-- **BunBook** — Cell outputs are **not saved** to the file. This keeps git diffs clean since only your code is stored.
-- **Jupyter Notebook** (with the TypeScript/Bun kernel selected) — Cell outputs **are saved** to the file. Use this when you want GitHub or nbviewer to render outputs inline.
+- **Outputs saved** (`foo.ipynb`) — outputs are persisted in the file. Use this when you want GitHub or nbviewer to render outputs inline.
+- **Outputs not saved** (`foo.no-output.ipynb`) — outputs are never written to the file. This keeps git diffs clean since only your code is stored.
+
+Toggling renames the file between `.ipynb` and `.no-output.ipynb`. Your unsaved edits are preserved.
 
 ## Plotly Charts
 

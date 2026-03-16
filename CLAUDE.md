@@ -7,7 +7,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```sh
 bun install          # install dependencies
 bun run compile      # one-off build
-bun run watch        # rebuild on changes
 bun start            # build, package .vsix, install locally
 ```
 
@@ -17,19 +16,23 @@ Press F5 in VS Code to launch the Extension Development Host (uses `examples/wit
 
 BunBook is a VS Code notebook extension that runs TypeScript cells via Bun.
 
-`.ipynb` files can be opened two ways:
-- **BunBook editor** — our serializer with `transientOutputs: true` (outputs not saved to file, clean git diffs)
-- **Jupyter Notebook editor** — Jupyter's serializer saves outputs (for GitHub/nbviewer preview), with BunBook registered as a kernel
+### Output persistence toggle
+
+Files use two naming conventions:
+- `foo.ipynb` — opened by Jupyter's editor, outputs saved to file
+- `foo.no-output.ipynb` — opened by BunBook's serializer with `transientOutputs: true`, outputs never saved (cleaner git diffs)
+
+A toolbar toggle renames the file between the two. The toggle snapshots dirty cell edits, reverts/closes the old editor, renames on disk (stripping outputs when converting to `.no-output.ipynb`), reopens with the correct editor, and restores dirty edits.
 
 ### Extension entry (`src/extension.ts`)
-Registers the serializer (for the `bunbook` notebook type), controller, and intellisense.
+Registers the serializer (for `*.no-output.ipynb`), controller, intellisense, toggle commands, and notebook close cleanup (kills workers).
 
 ### Notebook serializer (`src/serializer.ts`)
 Reads/writes standard ipynb format (nbformat 4.5). Registered with `transientOutputs: true` so outputs are never persisted. Always writes BunBook kernelspec metadata.
 
 ### Kernel controller (`src/controller.ts`)
 Registers two controllers:
-- `bunbook-controller` for the `bunbook` notebook type
+- `bunbook-no-output-controller` for the `bunbook` notebook type (`*.no-output.ipynb`)
 - `bunbook-jupyter-controller` for `jupyter-notebook` (appears in Jupyter's kernel picker)
 
 Both share the same execution logic. Manages **one persistent Bun worker process per open notebook** (keyed by notebook URI). Communication uses stdin/stdout marker protocol:

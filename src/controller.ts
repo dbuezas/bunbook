@@ -35,7 +35,7 @@ export class BunbookController {
     this._outputChannel = vscode.window.createOutputChannel("BunBook Worker");
 
     this._bunbookController = vscode.notebooks.createNotebookController(
-      "bunbook-controller",
+      "bunbook-no-output-controller",
       "bunbook",
       this._label
     );

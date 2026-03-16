@@ -3,27 +3,12 @@ import * as crypto from "crypto";
 
 // --- ipynb types ---
 
-interface IpynbStreamOutput {
-  output_type: "stream";
-  name: "stdout" | "stderr";
-  text: string[];
-}
-
-interface IpynbDisplayDataOutput {
-  output_type: "display_data" | "execute_result";
-  data: Record<string, unknown>;
-  metadata: Record<string, unknown>;
-  execution_count?: number | null;
-}
-
-type IpynbOutput = IpynbStreamOutput | IpynbDisplayDataOutput;
-
 interface IpynbCodeCell {
   cell_type: "code";
   id?: string;
   source: string[];
   metadata: Record<string, unknown>;
-  outputs: IpynbOutput[];
+  outputs: unknown[];
   execution_count: number | null;
 }
 

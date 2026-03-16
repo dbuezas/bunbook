@@ -1,7 +1,6 @@
 src/**
 .vscode/**
 tsconfig.json
-esbuild.mjs
 **/*.map
 out/**/*.ts
 !out/worker.ts

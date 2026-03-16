@@ -3,10 +3,6 @@ import * as vscode from "vscode";
 const PLOTLY_START = "___PLOTLY_OUTPUT___";
 const PLOTLY_END = "___END_PLOTLY___";
 
-export interface ParsedOutput {
-  items: vscode.NotebookCellOutputItem[];
-}
-
 export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
   const outputs: vscode.NotebookCellOutput[] = [];
   let remaining = stdout;
