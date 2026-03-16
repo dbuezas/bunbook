@@ -12,7 +12,8 @@
     "jupyter",
     "bun",
     "plotly",
-    "interactive"
+    "interactive",
+    "notebookKernelJupyterNotebook"
   ],
   "engines": {
     "vscode": "^1.85.0"
@@ -20,58 +21,72 @@
   "categories": [
     "Notebooks"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onNotebook:jupyter-notebook"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "notebooks": [
       {
         "type": "bunbook",
-        "displayName": "TypeScript Notebook",
+        "displayName": "BunBook — TypeScript (Bun), outputs not saved",
+        "priority": "default",
         "selector": [
           {
-            "filenamePattern": "*.bunbook"
+            "filenamePattern": "*.no-output.ipynb"
           }
         ]
       }
     ],
     "commands": [
       {
-        "command": "bunbook.newNotebook",
-        "title": "Create: New BunBook Notebook",
-        "shortTitle": "New BunBook"
-      },
-      {
         "command": "bunbook.restartKernel",
         "title": "Restart Kernel",
         "shortTitle": "Restart",
         "icon": "$(debug-restart)"
+      },
+      {
+        "command": "bunbook.enableSaveOutputs",
+        "title": "BunBook: Outputs NOT saved to file (click to enable)",
+        "shortTitle": "Save Outputs Off",
+        "icon": "$(circle-large-outline)"
+      },
+      {
+        "command": "bunbook.disableSaveOutputs",
+        "title": "BunBook: Outputs saved to file (click to disable for cleaner diffs)",
+        "shortTitle": "Save Outputs On",
+        "icon": "$(pass-filled)"
       }
     ],
     "menus": {
       "notebook/toolbar": [
         {
           "command": "bunbook.restartKernel",
-          "group": "navigation/execute",
-          "when": "notebookType == 'bunbook'"
+          "group": "navigation/execute@1",
+          "when": "(notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller') && bunbook.hasWorker"
+        },
+        {
+          "command": "bunbook.enableSaveOutputs",
+          "group": "navigation/execute@2",
+          "when": "(notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller') && !bunbook.persistOutputs"
+        },
+        {
+          "command": "bunbook.disableSaveOutputs",
+          "group": "navigation/execute@2",
+          "when": "(notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller') && bunbook.persistOutputs"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "bunbook.enableSaveOutputs",
+          "when": "(notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller') && !bunbook.persistOutputs"
+        },
+        {
+          "command": "bunbook.disableSaveOutputs",
+          "when": "(notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller') && bunbook.persistOutputs"
         }
       ]
     },
-    "languages": [
-      {
-        "id": "bunbook-typescript",
-        "aliases": [
-          "TypeScript (BunBook)"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "bunbook-typescript",
-        "scopeName": "source.ts.bunbook",
-        "path": "./syntaxes/bunbook-typescript.tmLanguage.json"
-      }
-    ],
     "notebookRenderer": [
       {
         "id": "bunbook-plotly-renderer",
@@ -86,9 +101,8 @@
   "scripts": {
     "vscode:prepublish": "node -e \"\" ",
     "compile": "bun build.ts",
-    "start": "rm -f bunbook-*.vsix && bun run package && code --install-extension bunbook-*.vsix",
-    "package": "bun build.ts --production && rm -rf node_modules && bun install --production && bunx @vscode/vsce package && bun install",
-    "publish": "bun build.ts --production && rm -rf node_modules && bun install --production && bunx @vscode/vsce publish"
+    "start": "rm -f bunbook-*.vsix && bun build.ts && vsce package && code --install-extension bunbook-*.vsix",
+    "publish": "bun build.ts --production && vsce publish"
   },
   "dependencies": {
     "@types/bun": "^1.3.10"
@@ -97,6 +111,7 @@
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
+    "@vscode/vsce": "^3.7.1",
     "acorn": "^8.14.0",
     "astring": "^1.9.0",
     "typescript": "^5.3.0"

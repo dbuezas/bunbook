@@ -15,6 +15,7 @@ A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). 
 - **TypeScript intellisense** — autocomplete, hover info, and diagnostics across cells
 - **Formatting** — auto-format cells with VS Code's format command
 - **Kernel restart** — reset all state with the restart button in the toolbar
+- **Standard `.ipynb` format** — notebooks are standard Jupyter files
 
 ## Requirements
 
@@ -23,9 +24,17 @@ A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). 
 
 ## Getting Started
 
-1. Create a `.bunbook` file
-2. Add code cells and write TypeScript
-3. Run cells with `Shift+Enter` or the play button
+1. Create a `.ipynb` file
+2. Select the **TypeScript (Bun)** kernel
+3. Write TypeScript in code cells
+4. Run cells with `Shift+Enter` or the play button
+
+## Two ways to open `.ipynb` files
+
+When opening a `.ipynb` file, VS Code may ask which editor to use:
+
+- **BunBook** — Cell outputs are **not saved** to the file. This keeps git diffs clean since only your code is stored.
+- **Jupyter Notebook** (with the TypeScript/Bun kernel selected) — Cell outputs **are saved** to the file. Use this when you want GitHub or nbviewer to render outputs inline.
 
 ## Plotly Charts
 

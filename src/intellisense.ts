@@ -48,9 +48,11 @@ export class BunbookIntellisense {
       vscode.languages.createDiagnosticCollection("bunbook-typescript");
     this._disposables.push(this._diagnostics);
 
+    const selector = { scheme: "vscode-notebook-cell", language: "typescript" };
+
     this._disposables.push(
       vscode.languages.registerCompletionItemProvider(
-        { scheme: "vscode-notebook-cell", language: "bunbook-typescript" },
+        selector,
         {
           provideCompletionItems: (doc, pos, _token, _ctx) =>
             this._provideCompletions(doc, pos),
@@ -60,44 +62,29 @@ export class BunbookIntellisense {
     );
 
     this._disposables.push(
-      vscode.languages.registerHoverProvider(
-        { scheme: "vscode-notebook-cell", language: "bunbook-typescript" },
-        {
-          provideHover: (doc, pos) => this._provideHover(doc, pos),
-        }
-      )
+      vscode.languages.registerHoverProvider(selector, {
+        provideHover: (doc, pos) => this._provideHover(doc, pos),
+      })
     );
 
     this._disposables.push(
-      vscode.languages.registerDocumentFormattingEditProvider(
-        { scheme: "vscode-notebook-cell", language: "bunbook-typescript" },
-        {
-          provideDocumentFormattingEdits: (doc, options) =>
-            this._provideFormatting(doc, options),
-        }
-      )
+      vscode.languages.registerDocumentFormattingEditProvider(selector, {
+        provideDocumentFormattingEdits: (doc, options) =>
+          this._provideFormatting(doc, options),
+      })
     );
 
     this._disposables.push(
-      vscode.languages.registerDefinitionProvider(
-        { scheme: "vscode-notebook-cell", language: "bunbook-typescript" },
-        {
-          provideDefinition: (doc, pos) => this._provideDefinition(doc, pos),
-        }
-      )
+      vscode.languages.registerDefinitionProvider(selector, {
+        provideDefinition: (doc, pos) => this._provideDefinition(doc, pos),
+      })
     );
 
     // Update diagnostics on cell content changes
     this._disposables.push(
       vscode.workspace.onDidChangeTextDocument((e) => {
-        const notebook = vscode.workspace.notebookDocuments.find((nb) =>
-          nb
-            .getCells()
-            .some(
-              (c) => c.document.uri.toString() === e.document.uri.toString()
-            )
-        );
-        if (notebook?.notebookType === "bunbook") {
+        const notebook = this._findBunbookNotebook(e.document.uri);
+        if (notebook) {
           this._debouncedDiagnostics(notebook);
         }
       })
@@ -106,7 +93,7 @@ export class BunbookIntellisense {
     // Update on cell structure changes (add/remove/reorder)
     this._disposables.push(
       vscode.workspace.onDidChangeNotebookDocument((e) => {
-        if (e.notebook.notebookType === "bunbook") {
+        if (this._isBunbookNotebook(e.notebook)) {
           this._debouncedDiagnostics(e.notebook);
         }
       })
@@ -115,12 +102,24 @@ export class BunbookIntellisense {
     // Clear diagnostics when notebook closes
     this._disposables.push(
       vscode.workspace.onDidCloseNotebookDocument((notebook) => {
-        if (notebook.notebookType === "bunbook") {
+        if (this._isBunbookNotebook(notebook)) {
           for (const cell of notebook.getCells()) {
             this._diagnostics.delete(cell.document.uri);
           }
         }
       })
+    );
+  }
+
+  private _isBunbookNotebook(notebook: vscode.NotebookDocument): boolean {
+    return notebook.notebookType === "bunbook" || notebook.notebookType === "jupyter-notebook";
+  }
+
+  private _findBunbookNotebook(cellUri: vscode.Uri): vscode.NotebookDocument | undefined {
+    return vscode.workspace.notebookDocuments.find(
+      (nb) =>
+        this._isBunbookNotebook(nb) &&
+        nb.getCells().some((c) => c.document.uri.toString() === cellUri.toString())
     );
   }
 
@@ -225,12 +224,8 @@ export class BunbookIntellisense {
     host: VirtualLanguageServiceHost;
     cellIndex: number;
   } | null {
-    const notebook = vscode.workspace.notebookDocuments.find((nb) =>
-      nb
-        .getCells()
-        .some((c) => c.document.uri.toString() === doc.uri.toString())
-    );
-    if (!notebook || notebook.notebookType !== "bunbook") return null;
+    const notebook = this._findBunbookNotebook(doc.uri);
+    if (!notebook) return null;
 
     const cell = notebook
       .getCells()

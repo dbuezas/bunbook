@@ -22,32 +22,58 @@ interface WorkerState {
 }
 
 export class BunbookController {
-  private readonly _id = "bunbook-controller";
-  private readonly _label = "TypeScript (bun)";
-  private readonly _supportedLanguages = ["bunbook-typescript"];
-  private readonly _controller: vscode.NotebookController;
+  private readonly _label = "TypeScript (Bun)";
+  private readonly _supportedLanguages = ["typescript"];
+  private readonly _bunbookController: vscode.NotebookController;
+  private readonly _jupyterController: vscode.NotebookController;
   private _executionOrder = 0;
   private readonly _workers = new Map<string, WorkerState>();
   private readonly _outputChannel: vscode.OutputChannel;
+  private _onWorkersChanged: (() => void) | undefined;
 
   constructor(private readonly _extensionUri: vscode.Uri) {
     this._outputChannel = vscode.window.createOutputChannel("BunBook Worker");
-    this._controller = vscode.notebooks.createNotebookController(
-      this._id,
+
+    this._bunbookController = vscode.notebooks.createNotebookController(
+      "bunbook-controller",
       "bunbook",
       this._label
     );
-    this._controller.supportedLanguages = this._supportedLanguages;
-    this._controller.supportsExecutionOrder = true;
-    this._controller.executeHandler = this._executeAll.bind(this);
-    this._controller.interruptHandler = this._interrupt.bind(this);
+    this._setupController(this._bunbookController);
+
+    this._jupyterController = vscode.notebooks.createNotebookController(
+      "bunbook-jupyter-controller",
+      "jupyter-notebook",
+      this._label
+    );
+    this._setupController(this._jupyterController);
+  }
+
+  private _setupController(controller: vscode.NotebookController): void {
+    controller.supportedLanguages = this._supportedLanguages;
+    controller.supportsExecutionOrder = true;
+    controller.executeHandler = this._executeAll.bind(this);
+    controller.interruptHandler = this._interrupt.bind(this);
+  }
+
+  set onWorkersChanged(cb: (() => void) | undefined) {
+    this._onWorkersChanged = cb;
+  }
+
+  hasWorker(notebookUri: string): boolean {
+    return this._workers.has(notebookUri);
+  }
+
+  killWorkerByUri(notebookUri: string): void {
+    this._killWorker(notebookUri);
   }
 
   dispose(): void {
     for (const key of this._workers.keys()) {
       this._killWorker(key);
     }
-    this._controller.dispose();
+    this._bunbookController.dispose();
+    this._jupyterController.dispose();
     this._outputChannel.dispose();
   }
 
@@ -77,6 +103,7 @@ export class BunbookController {
     const reject = state.pendingReject;
     this._workers.delete(notebookUri);
     if (reject) reject(new Error("Worker restarted"));
+    this._onWorkersChanged?.();
   }
 
   private _ensureWorker(notebook: vscode.NotebookDocument): Promise<void> {
@@ -144,6 +171,7 @@ export class BunbookController {
       state.worker.on("exit", (code) => {
         this._outputChannel.appendLine(`[worker] exited with code ${code}`);
         this._workers.delete(key);
+        this._onWorkersChanged?.();
         if (!ready) {
           reject(new Error(`Worker exited with code ${code} before becoming ready. Check "BunBook Worker" output for details.`));
         }
@@ -151,6 +179,7 @@ export class BunbookController {
     });
 
     this._workers.set(key, state);
+    this._onWorkersChanged?.();
     return state.ready;
   }
 
@@ -225,9 +254,9 @@ export class BunbookController {
   private async _executeCell(
     cell: vscode.NotebookCell,
     notebook: vscode.NotebookDocument,
-    _controller: vscode.NotebookController
+    controller: vscode.NotebookController
   ): Promise<void> {
-    const execution = this._controller.createNotebookCellExecution(cell);
+    const execution = controller.createNotebookCellExecution(cell);
     execution.executionOrder = ++this._executionOrder;
     execution.start(Date.now());
 

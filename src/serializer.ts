@@ -1,42 +1,120 @@
 import * as vscode from "vscode";
+import * as crypto from "crypto";
 
-interface RawCell {
-  kind: "code" | "markdown";
-  language?: string;
-  value: string | string[];
+// --- ipynb types ---
+
+interface IpynbStreamOutput {
+  output_type: "stream";
+  name: "stdout" | "stderr";
+  text: string[];
 }
 
-interface RawNotebook {
-  cells: RawCell[];
+interface IpynbDisplayDataOutput {
+  output_type: "display_data" | "execute_result";
+  data: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  execution_count?: number | null;
 }
+
+type IpynbOutput = IpynbStreamOutput | IpynbDisplayDataOutput;
+
+interface IpynbCodeCell {
+  cell_type: "code";
+  id?: string;
+  source: string[];
+  metadata: Record<string, unknown>;
+  outputs: IpynbOutput[];
+  execution_count: number | null;
+}
+
+interface IpynbMarkdownCell {
+  cell_type: "markdown";
+  id?: string;
+  source: string[];
+  metadata: Record<string, unknown>;
+}
+
+type IpynbCell = IpynbCodeCell | IpynbMarkdownCell;
+
+interface IpynbNotebook {
+  nbformat: number;
+  nbformat_minor: number;
+  metadata: Record<string, unknown>;
+  cells: IpynbCell[];
+}
+
+/** Split a string into ipynb source lines: each line ends with \n except the last. */
+function stringToSourceLines(value: string): string[] {
+  if (value === "") return [];
+  const lines = value.split("\n");
+  return lines.map((line, i) => (i < lines.length - 1 ? line + "\n" : line));
+}
+
+const decoder = new TextDecoder();
+
+const IPYNB_METADATA = {
+  kernelspec: {
+    name: "bunbook",
+    display_name: "TypeScript (Bun)",
+    language: "typescript",
+  },
+  language_info: {
+    name: "typescript",
+    file_extension: ".ts",
+  },
+};
 
 export class BunbookSerializer implements vscode.NotebookSerializer {
   deserializeNotebook(
     content: Uint8Array,
     _token: vscode.CancellationToken
   ): vscode.NotebookData {
-    const text = new TextDecoder().decode(content).trim();
+    const text = decoder.decode(content).trim();
 
-    let raw: RawNotebook;
     if (!text) {
-      raw = { cells: [{ kind: "code", language: "bunbook-typescript", value: "" }] };
-    } else {
-      try {
-        raw = JSON.parse(text);
-      } catch {
-        raw = { cells: [{ kind: "code", language: "bunbook-typescript", value: "" }] };
-      }
+      return this._emptyNotebook();
+    }
+
+    let json: any;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      return this._emptyNotebook();
+    }
+
+    return this._deserializeIpynb(json as IpynbNotebook);
+  }
+
+  private _emptyNotebook(): vscode.NotebookData {
+    return new vscode.NotebookData([
+      new vscode.NotebookCellData(
+        vscode.NotebookCellKind.Code,
+        "",
+        "typescript"
+      ),
+    ]);
+  }
+
+  private _deserializeIpynb(raw: IpynbNotebook): vscode.NotebookData {
+    if (!Array.isArray(raw.cells) || raw.cells.length === 0) {
+      return this._emptyNotebook();
     }
 
     const cells = raw.cells.map((cell) => {
       const kind =
-        cell.kind === "markdown"
+        cell.cell_type === "markdown"
           ? vscode.NotebookCellKind.Markup
           : vscode.NotebookCellKind.Code;
       const language =
-        cell.kind === "markdown" ? "markdown" : cell.language ?? "bunbook-typescript";
-      const value = Array.isArray(cell.value) ? cell.value.join("\n") : cell.value;
-      return new vscode.NotebookCellData(kind, value, language);
+        cell.cell_type === "markdown" ? "markdown" : "typescript";
+      const value = Array.isArray(cell.source) ? cell.source.join("") : "";
+      const cellData = new vscode.NotebookCellData(kind, value, language);
+
+      if (cell.id) {
+        cellData.metadata = { id: cell.id };
+      }
+
+      return cellData;
     });
 
     return new vscode.NotebookData(cells);
@@ -46,20 +124,36 @@ export class BunbookSerializer implements vscode.NotebookSerializer {
     data: vscode.NotebookData,
     _token: vscode.CancellationToken
   ): Uint8Array {
-    const raw: RawNotebook = {
-      cells: data.cells.map((cell) => {
-        const lines = cell.value.split("\n");
-        if (cell.kind === vscode.NotebookCellKind.Markup) {
-          return { kind: "markdown" as const, value: lines };
-        }
+    const cells: IpynbCell[] = data.cells.map((cell) => {
+      const id = cell.metadata?.id ?? crypto.randomUUID();
+      const source = stringToSourceLines(cell.value);
+
+      if (cell.kind === vscode.NotebookCellKind.Markup) {
         return {
-          kind: "code" as const,
-          language: cell.languageId,
-          value: lines,
+          cell_type: "markdown" as const,
+          id,
+          source,
+          metadata: {},
         };
-      }),
+      }
+
+      return {
+        cell_type: "code" as const,
+        id,
+        source,
+        metadata: {},
+        outputs: [],
+        execution_count: null,
+      };
+    });
+
+    const notebook: IpynbNotebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      metadata: IPYNB_METADATA,
+      cells,
     };
 
-    return new TextEncoder().encode(JSON.stringify(raw, null, 2) + "\n");
+    return new TextEncoder().encode(JSON.stringify(notebook, null, 1) + "\n");
   }
 }

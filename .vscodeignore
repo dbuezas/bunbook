@@ -6,14 +6,13 @@ esbuild.mjs
 out/**/*.ts
 !out/worker.ts
 !out/transformCode.js
-samples/**
 examples/**
-changelog.md
 build.ts
 bun.lock
 .gitignore
 CLAUDE.md
 .claude/**
+.github/**
 screenshot.png
 node_modules/**
 !node_modules/**/*.d.ts
