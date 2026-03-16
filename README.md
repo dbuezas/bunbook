@@ -69,7 +69,7 @@ console.log(mean(data));
 
 - [`hello-world.ipynb`](examples/hello-world/hello-world.ipynb) — minimal notebook, no setup needed
 - [`plots.ipynb`](examples/plots/plots.ipynb) — Plotly charts with shared state across cells
-- [`demo.ipynb`](examples/with-dependencies/demo.ipynb) — npm dependencies, local file imports, and linear regression with Plotly
+- [`with-dependencies.ipynb`](examples/with-dependencies/with-dependencies.ipynb) — npm dependencies, local file imports, and linear regression with Plotly
 
 ## Development
 
