@@ -59,7 +59,7 @@ export const activate: ActivationFunction = (_context) => ({
     try {
       const Plotly = await loadPlotly();
 
-      const plotlyData: PlotlyData = outputItem.json();
+      const plotlyData: PlotlyData = JSON.parse(outputItem.text());
       const container = document.createElement("div");
       container.style.width = "100%";
       container.style.minHeight = "400px";

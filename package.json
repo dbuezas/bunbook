@@ -93,7 +93,7 @@
         "displayName": "Plotly Renderer",
         "entrypoint": "./out/renderer/index.js",
         "mimeTypes": [
-          "application/vnd.plotly+json"
+          "application/vnd.bunbook.plotly"
         ]
       }
     ]

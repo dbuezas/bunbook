@@ -2,24 +2,8 @@ import * as vscode from "vscode";
 
 const PLOTLY_START = "___PLOTLY_OUTPUT___";
 const PLOTLY_END = "___END_PLOTLY___";
-const PLOTLY_CDN = "https://cdn.plot.ly/plotly-2.35.2.min.js";
-let plotlyOutputId = 0;
 
-function plotlyHtml(jsonStr: string): string {
-  const id = `plotly-${Date.now()}-${plotlyOutputId++}`;
-  return `<div id="${id}"></div>
-<script type="text/javascript">
-(function() {
-  var d = ${jsonStr};
-  function render() { Plotly.newPlot("${id}", d.data, d.layout || {}, d.config || {}); }
-  if (typeof Plotly !== "undefined") { render(); return; }
-  var s = document.createElement("script");
-  s.src = "${PLOTLY_CDN}";
-  s.onload = render;
-  document.head.appendChild(s);
-})();
-</script>`;
-}
+const PLOTLY_FALLBACK_HTML = `<p style="color:#888;font-size:13px">Plotly chart — install <a href="https://marketplace.visualstudio.com/items?itemName=DavidBuezas.bunbook">BunBook</a> in VS Code to view interactive plots.</p>`;
 
 export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
   const outputs: vscode.NotebookCellOutput[] = [];
@@ -69,15 +53,15 @@ export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
 
     const jsonStr = remaining.substring(jsonStart, endIdx);
     try {
-      const plotlyData = JSON.parse(jsonStr);
+      JSON.parse(jsonStr); // validate
       outputs.push(
         new vscode.NotebookCellOutput([
-          vscode.NotebookCellOutputItem.json(
-            plotlyData,
-            "application/vnd.plotly+json"
+          new vscode.NotebookCellOutputItem(
+            new TextEncoder().encode(jsonStr),
+            "application/vnd.bunbook.plotly"
           ),
           vscode.NotebookCellOutputItem.text(
-            plotlyHtml(jsonStr),
+            PLOTLY_FALLBACK_HTML,
             "text/html"
           ),
         ])

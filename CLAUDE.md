@@ -52,7 +52,7 @@ Copied as-is to `out/worker.ts` (not bundled — Bun runs TypeScript directly). 
 Plotly calls are intercepted: `globalThis.Plotly.newPlot()` writes `___PLOTLY_OUTPUT___` + JSON + `___END_PLOTLY___` markers to stdout.
 
 ### Output parser (`src/outputParser.ts`)
-Splits worker stdout into text outputs and Plotly JSON outputs (MIME type `application/vnd.plotly+json`).
+Splits worker stdout into text outputs and Plotly HTML outputs. Plotly charts are rendered as self-contained `text/html` with inline script that loads Plotly from CDN (temporarily disabling `window.define` to avoid RequireJS/AMD conflicts in nbviewer and VS Code webviews).
 
 ### Intellisense (`src/intellisense.ts`)
 Creates a TypeScript LanguageService over a **virtual file** that concatenates all code cells. Cell offset tracking (`_cellOffsets`) maps between virtual file positions and individual cell positions. Works with both `bunbook` and `jupyter-notebook` notebook types.
@@ -62,11 +62,12 @@ TypeScript is loaded at runtime from VS Code's built-in `vscode.typescript-langu
 Provides: completions, hover, formatting, go-to-definition, and diagnostics (debounced 500ms). Ambient declarations define Plotly types inline.
 
 ### Renderer (`src/renderer/index.ts`)
-Browser-side ESM module. Lazy-loads Plotly.js from CDN (with `window.define` temporarily removed to prevent AMD/RequireJS conflicts in VS Code's webview). Renders `application/vnd.plotly+json` output items. Uses ResizeObserver for responsive charts.
+Browser-side ESM module for VS Code's notebook webview. Renders `application/vnd.plotly+json` output items. Lazy-loads Plotly.js from CDN (temporarily removing `window.define` to avoid AMD/RequireJS conflicts). Uses ResizeObserver for responsive charts. This is needed because `<script>` tags in saved `text/html` outputs don't execute in VS Code notebooks.
 
 ### Build (`build.ts`)
-Uses `Bun.build()` for two bundles:
+Uses `Bun.build()` for:
 - Extension: CJS, target node, externals `vscode` + `typescript`
 - Renderer: ESM, target browser
+- transformCode: ESM, bundled with acorn+astring so the worker doesn't need node_modules
 
 Worker.ts is copied verbatim (Bun runs it directly as TypeScript).
