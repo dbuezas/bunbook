@@ -70,7 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     // Kill the worker for the old URI
-    controller.killWorkerByUri(oldUri.toString());
+    controller.killWorker(oldUri.toString());
 
     // Revert (clears dirty flag) and close — no save prompt
     await vscode.commands.executeCommand("workbench.action.revertAndCloseActiveEditor");
@@ -140,7 +140,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Kill worker when a notebook is closed
   context.subscriptions.push(
     vscode.workspace.onDidCloseNotebookDocument((notebook) => {
-      controller.killWorkerByUri(notebook.uri.toString());
+      controller.killWorker(notebook.uri.toString());
     })
   );
 

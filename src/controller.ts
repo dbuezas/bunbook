@@ -53,7 +53,7 @@ export class BunbookController {
     controller.supportedLanguages = this._supportedLanguages;
     controller.supportsExecutionOrder = true;
     controller.executeHandler = this._executeAll.bind(this);
-    controller.interruptHandler = this._interrupt.bind(this);
+    controller.interruptHandler = () => this.restart();
   }
 
   set onWorkersChanged(cb: (() => void) | undefined) {
@@ -64,13 +64,9 @@ export class BunbookController {
     return this._workers.has(notebookUri);
   }
 
-  killWorkerByUri(notebookUri: string): void {
-    this._killWorker(notebookUri);
-  }
-
   dispose(): void {
     for (const key of this._workers.keys()) {
-      this._killWorker(key);
+      this.killWorker(key);
     }
     this._bunbookController.dispose();
     this._jupyterController.dispose();
@@ -79,23 +75,16 @@ export class BunbookController {
 
   restart(notebook?: vscode.NotebookDocument): void {
     if (notebook) {
-      this._killWorker(notebook.uri.toString());
+      this.killWorker(notebook.uri.toString());
     } else {
       for (const key of this._workers.keys()) {
-        this._killWorker(key);
+        this.killWorker(key);
       }
     }
     this._executionOrder = 0;
   }
 
-  private _interrupt(): void {
-    for (const key of this._workers.keys()) {
-      this._killWorker(key);
-    }
-    this._executionOrder = 0;
-  }
-
-  private _killWorker(notebookUri: string): void {
+  killWorker(notebookUri: string): void {
     const state = this._workers.get(notebookUri);
     if (!state) return;
 
