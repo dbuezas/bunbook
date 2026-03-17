@@ -12,7 +12,7 @@ A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). 
 - **Shared state** — variables defined in one cell are available in subsequent cells
 - **Imports** — `import` from local files or `node_modules` dependencies
 - **Rich outputs** — `display()` API for HTML, Markdown, JSON, SVG, images, and custom MIME types
-- **Plotly charts** — render interactive charts inline with `Plotly.newPlot()`
+- **Plotly charts** — render interactive charts inline with `display.plotly()`
 - **TypeScript intellisense** — autocomplete, hover info, and diagnostics across cells
 - **Formatting** — auto-format cells with VS Code's format command
 - **Kernel restart** — reset all state with the restart button in the toolbar

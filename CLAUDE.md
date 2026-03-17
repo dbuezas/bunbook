@@ -49,7 +49,7 @@ Copied as-is to `out/worker.ts` (not bundled — Bun runs TypeScript directly). 
 3. Static `import` → dynamic `await import()` with paths resolved via `Bun.resolveSync()`
 4. Code wrapped in async IIFE, then variables hoisted to `globalThis`
 
-Plotly calls are intercepted: `globalThis.Plotly.newPlot()` writes `___PLOTLY_OUTPUT___` + JSON + `___END_PLOTLY___` markers to stdout.
+Plotly calls are intercepted: `display.plotly()` (and its alias `Plotly.newPlot()`) writes display markers to stdout.
 
 ### Output parser (`src/outputParser.ts`)
 Splits worker stdout into text outputs and Plotly outputs. Plotly charts produce two MIME types: `application/vnd.bunbook.plotly` (compact JSON string for the VS Code renderer) and `text/html` (fallback message linking to the extension for non-VS Code viewers like nbviewer/GitHub). The custom MIME type avoids `+json` suffix so Jupyter's serializer stores it as a single-line string instead of pretty-printed JSON.

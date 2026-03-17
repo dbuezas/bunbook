@@ -436,82 +436,24 @@ const VIRTUAL_FILENAME = "___bunbook___.ts";
 // Prepended to the virtual file so TypeScript treats it as a module (enabling top-level await)
 const VIRTUAL_PREAMBLE = "export {};\n";
 
-// Ambient declarations for globals available in the worker
+// Ambient declarations for globals available in the worker.
+// This file must remain a script (no imports) so declarations are global.
+// We use /// <reference types="plotly.js" /> to get Plotly types, then
+// re-declare the Plotly const with our element-less API.
 const AMBIENT_DECLARATIONS = `
 /// <reference types="bun-types" />
+/// <reference types="plotly.js" />
 
-declare namespace Plotly {
-  interface Datum {}
-  interface PlotData {
-    x: (number | string | Date)[];
-    y: (number | string | Date)[];
-    z?: (number | string | Date)[] | (number | string | Date)[][];
-    type: "scatter" | "bar" | "pie" | "histogram" | "heatmap" | "contour"
-      | "scatter3d" | "surface" | "box" | "violin" | "scattergeo"
-      | "choropleth" | "scattermapbox" | "candlestick" | "ohlc"
-      | "scatterpolar" | "scatterternary" | "sunburst" | "treemap"
-      | "funnel" | "waterfall" | "sankey" | string;
-    mode?: "lines" | "markers" | "text" | "lines+markers" | "lines+text"
-      | "markers+text" | "lines+markers+text" | "none" | string;
-    name?: string;
-    marker?: {
-      color?: string | string[] | number[];
-      size?: number | number[];
-      symbol?: string;
-      line?: { color?: string; width?: number };
-      colorscale?: string | [number, string][];
-      showscale?: boolean;
-      opacity?: number | number[];
-      [key: string]: any;
-    };
-    line?: {
-      color?: string;
-      width?: number;
-      dash?: "solid" | "dot" | "dash" | "longdash" | "dashdot" | "longdashdot";
-      shape?: "linear" | "spline" | "hv" | "vh" | "hvh" | "vhv";
-      [key: string]: any;
-    };
-    text?: string | string[];
-    textposition?: string;
-    hoverinfo?: string;
-    fill?: "none" | "tozeroy" | "tozerox" | "tonexty" | "tonextx" | "toself" | "tonext";
-    fillcolor?: string;
-    opacity?: number;
-    orientation?: "v" | "h";
-    [key: string]: any;
-  }
-  interface Layout {
-    title?: string | { text: string; [key: string]: any };
-    xaxis?: { title?: string | { text: string }; [key: string]: any };
-    yaxis?: { title?: string | { text: string }; [key: string]: any };
-    width?: number;
-    height?: number;
-    showlegend?: boolean;
-    legend?: Record<string, any>;
-    margin?: { l?: number; r?: number; t?: number; b?: number; pad?: number };
-    paper_bgcolor?: string;
-    plot_bgcolor?: string;
-    font?: { family?: string; size?: number; color?: string };
-    barmode?: "stack" | "group" | "overlay" | "relative";
-    template?: any;
-    [key: string]: any;
-  }
-  interface Config {
-    responsive?: boolean;
-    displayModeBar?: boolean | "hover";
-    displaylogo?: boolean;
-    scrollZoom?: boolean;
-    staticPlot?: boolean;
-    editable?: boolean;
-    toImageButtonOptions?: Record<string, any>;
-    [key: string]: any;
-  }
-  function newPlot(
-    data: Partial<PlotData>[],
-    layout?: Partial<Layout>,
-    config?: Partial<Config>
+// BunBook's Plotly API: same as Plotly.js but without the root element parameter.
+interface BunBookPlotly {
+  newPlot(
+    data: Plotly.Data[],
+    layout?: Partial<Plotly.Layout>,
+    config?: Partial<Plotly.Config>
   ): void;
 }
+
+declare const Plotly: BunBookPlotly;
 
 interface DisplayFunction {
   /** Generic display: raw string + MIME type */
@@ -529,7 +471,7 @@ interface DisplayFunction {
   /** Display SVG content */
   svg(svg: string): void;
   /** Render an interactive Plotly chart */
-  plotly(data: Partial<Plotly.PlotData>[], layout?: Partial<Plotly.Layout>, config?: Partial<Plotly.Config>): void;
+  plotly(data: Plotly.Data[], layout?: Partial<Plotly.Layout>, config?: Partial<Plotly.Config>): void;
 }
 
 declare const display: DisplayFunction;
