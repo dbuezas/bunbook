@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.11
+
+- **`display()` API** for rich cell outputs — `display.html()`, `display.markdown()`, `display.json()`, `display.svg()`, `display.image()`, plus generic `display(data, mime)` and multi-MIME `display({ ... })` overloads
+- Plotly charts now use the unified display marker protocol internally (no user-facing change)
+- Intellisense support for `display.*` methods with full type declarations
+- Serializer accepts `source` as a single string in addition to the standard line array format
+- New `examples/display/` notebook showcasing all display types, matplotlib integration, Mermaid diagrams via CLI, and Vega-Lite charts
+
 ## 0.0.10
 
 - Opening a legacy `.bunbook` file now shows a migration prompt to convert it to `.no-output.ipynb`, instead of opening in a broken state

@@ -11,6 +11,7 @@ A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). 
 - **Bun runtime** — cells execute via Bun with near-instant startup
 - **Shared state** — variables defined in one cell are available in subsequent cells
 - **Imports** — `import` from local files or `node_modules` dependencies
+- **Rich outputs** — `display()` API for HTML, Markdown, JSON, SVG, images, and custom MIME types
 - **Plotly charts** — render interactive charts inline with `Plotly.newPlot()`
 - **TypeScript intellisense** — autocomplete, hover info, and diagnostics across cells
 - **Formatting** — auto-format cells with VS Code's format command
@@ -37,6 +38,33 @@ Use the toolbar toggle to control whether cell outputs are saved to the file:
 - **Outputs not saved** (`foo.no-output.ipynb`) — outputs are never written to the file. This keeps git diffs clean since only your code is stored.
 
 Toggling renames the file between `.ipynb` and `.no-output.ipynb`. Your unsaved edits are preserved.
+
+## Rich Outputs with `display()`
+
+Use `display()` to render rich content in cell outputs:
+
+```typescript
+display.html("<h1>Hello World</h1>")
+display.markdown("## Bold **text**")
+display.json({ name: "test", value: 42 })
+display.svg('<svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>')
+display.image(pngBuffer)                    // Buffer | Uint8Array, defaults to image/png
+display.image(jpegBuffer, "image/jpeg")     // explicit MIME
+display("raw string", "text/plain")         // generic: data + MIME
+display({ "text/html": "<b>hi</b>", "text/plain": "hi" }) // multi-MIME
+```
+
+Combine with CLI tools for even more output types:
+
+```typescript
+// Matplotlib plot
+const png = await Bun.$`python3 -c ${matplotlibScript}`.arrayBuffer()
+display.image(new Uint8Array(png))
+
+// Mermaid diagram
+const svg = await Bun.$`bunx -p @mermaid-js/mermaid-cli mmdc -i - -o - -e svg < ${diagram}`.text()
+display.svg(svg)
+```
 
 ## Plotly Charts
 
@@ -70,6 +98,7 @@ console.log(mean(data));
 - [`hello-world.ipynb`](examples/hello-world/hello-world.ipynb) — minimal notebook, no setup needed
 - [`plots.ipynb`](examples/plots/plots.ipynb) — Plotly charts with shared state across cells
 - [`with-dependencies.ipynb`](examples/with-dependencies/with-dependencies.ipynb) — npm dependencies, local file imports, and linear regression with Plotly
+- [`display.ipynb`](examples/display/display.ipynb) — rich outputs: HTML, Markdown, JSON, SVG, images, matplotlib, Mermaid, and Vega-Lite
 
 ## Development
 
