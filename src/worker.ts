@@ -56,20 +56,21 @@ display.svg = (svg: string) => {
   writeDisplay({ items: [{ mime: "image/svg+xml", data: svg }] });
 };
 
+display.plotly = (data: any[], layout?: any, config?: any) => {
+  const json = JSON.stringify({ data, layout, config });
+  writeDisplay({
+    items: [
+      { mime: "application/vnd.bunbook.plotly", data: json },
+      { mime: "text/html", data: PLOTLY_FALLBACK_HTML },
+    ],
+  });
+};
+
 (globalThis as any).display = display;
 
-// Provide Plotly.newPlot globally so cells can call it directly.
-// Uses the display() marker protocol internally.
+// Provide Plotly.newPlot globally as an alias for display.plotly().
 (globalThis as any).Plotly = {
-  newPlot(data: any[], layout?: any, config?: any) {
-    const json = JSON.stringify({ data, layout, config });
-    writeDisplay({
-      items: [
-        { mime: "application/vnd.bunbook.plotly", data: json },
-        { mime: "text/html", data: PLOTLY_FALLBACK_HTML },
-      ],
-    });
-  },
+  newPlot: display.plotly,
 };
 
 // Resolve a module specifier to an absolute path from the notebook's cwd.

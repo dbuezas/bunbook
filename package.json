@@ -102,10 +102,10 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "node -e \"\" ",
+    "vscode:prepublish": "bun build.ts --production",
     "compile": "bun build.ts",
-    "start": "rm -f bunbook-*.vsix && bun build.ts && vsce package && code --install-extension bunbook-*.vsix",
-    "publish": "bun build.ts --production && vsce publish"
+    "start": "rm -f bunbook-*.vsix && vsce package && code --install-extension bunbook-*.vsix",
+    "publish": "vsce publish"
   },
   "dependencies": {
     "@types/bun": "^1.3.10"

@@ -528,6 +528,8 @@ interface DisplayFunction {
   json(obj: any): void;
   /** Display SVG content */
   svg(svg: string): void;
+  /** Render an interactive Plotly chart */
+  plotly(data: Partial<Plotly.PlotData>[], layout?: Partial<Plotly.Layout>, config?: Partial<Plotly.Config>): void;
 }
 
 declare const display: DisplayFunction;

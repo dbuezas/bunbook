@@ -50,6 +50,7 @@ display.json({ name: "test", value: 42 })
 display.svg('<svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>')
 display.image(pngBuffer)                    // Buffer | Uint8Array, defaults to image/png
 display.image(jpegBuffer, "image/jpeg")     // explicit MIME
+display.plotly([{ x: [1, 2], y: [1, 4], type: "scatter" }]) // interactive Plotly chart
 display("raw string", "text/plain")         // generic: data + MIME
 display({ "text/html": "<b>hi</b>", "text/plain": "hi" }) // multi-MIME
 ```
@@ -68,10 +69,10 @@ display.svg(svg)
 
 ## Plotly Charts
 
-Use `Plotly.newPlot()` to render interactive charts:
+Use `display.plotly()` to render interactive charts:
 
 ```typescript
-Plotly.newPlot([{ x: [1, 2, 3], y: [1, 4, 9], type: "scatter" }], {
+display.plotly([{ x: [1, 2, 3], y: [1, 4, 9], type: "scatter" }], {
   title: "My Chart",
 });
 ```
@@ -79,8 +80,10 @@ Plotly.newPlot([{ x: [1, 2, 3], y: [1, 4, 9], type: "scatter" }], {
 The API matches [Plotly.js](https://plotly.com/javascript/) but without the first `element` parameter:
 
 ```typescript
-Plotly.newPlot(data, layout?, config?)
+display.plotly(data, layout?, config?)
 ```
+
+`Plotly.newPlot(data, layout?, config?)` still works as an alias.
 
 ## Using Dependencies
 
