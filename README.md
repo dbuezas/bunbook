@@ -4,7 +4,7 @@ A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). 
 
 ## [Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=DavidBuezas.bunbook)
 
-![BunBook screenshot](https://raw.githubusercontent.com/dbuezas/bunbook/main/screenshot.png)
+![demo](https://github.com/user-attachments/assets/ff75308f-2340-4b2e-815e-e2c474829b9e)
 
 ## Features
 
