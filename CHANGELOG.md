@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.10
+
+- Opening a legacy `.bunbook` file now shows a migration prompt to convert it to `.no-output.ipynb`, instead of opening in a broken state
+
 ## 0.0.9
 
 - **Standard `.ipynb` format** — notebooks now use the Jupyter `.ipynb` format instead of the custom `.bunbook` format. Existing `.bunbook` files are still supported and silently migrated on save.
