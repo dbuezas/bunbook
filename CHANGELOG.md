@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.12
+
+- **`display.plotly()`** — new method for rendering interactive Plotly charts, consistent with the rest of the `display.*` API
+- `Plotly.newPlot()` still works as a backwards-compatible alias
+- **Full Plotly types** — replaced hand-rolled type stubs with `@types/plotly.js` for complete autocomplete coverage of all trace types, layout options, and config
+- `vscode:prepublish` now runs `bun build.ts --production`, ensuring `vsce package` always produces a fresh build
+- Updated all examples to use `display.plotly()`
+
 ## 0.0.11
 
 - **`display()` API** for rich cell outputs — `display.html()`, `display.markdown()`, `display.json()`, `display.svg()`, `display.image()`, plus generic `display(data, mime)` and multi-MIME `display({ ... })` overloads
