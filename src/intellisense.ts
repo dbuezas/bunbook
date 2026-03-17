@@ -45,7 +45,7 @@ export class BunbookIntellisense {
 
   constructor(private readonly _extensionPath: string) {
     this._diagnostics =
-      vscode.languages.createDiagnosticCollection("bunbook-typescript");
+      vscode.languages.createDiagnosticCollection("bunbook");
     this._disposables.push(this._diagnostics);
 
     const selector = { scheme: "vscode-notebook-cell", language: "typescript" };
