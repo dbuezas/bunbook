@@ -1,19 +1,24 @@
 import * as vscode from "vscode";
 
-const PLOTLY_START = "___PLOTLY_OUTPUT___";
-const PLOTLY_END = "___END_PLOTLY___";
+const DISPLAY_START = "___DISPLAY_OUTPUT___";
+const DISPLAY_END = "___END_DISPLAY___";
 
-const PLOTLY_FALLBACK_HTML = `<p style="color:#888;font-size:13px">Plotly chart — install <a href="https://marketplace.visualstudio.com/items?itemName=DavidBuezas.bunbook">BunBook</a> in VS Code to view interactive plots.</p>`;
+const BINARY_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]);
 
 export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
   const outputs: vscode.NotebookCellOutput[] = [];
   let remaining = stdout;
 
   while (remaining.length > 0) {
-    const startIdx = remaining.indexOf(PLOTLY_START);
+    const startIdx = remaining.indexOf(DISPLAY_START);
 
     if (startIdx === -1) {
-      // No more plotly markers — rest is plain text
+      // No more display markers — rest is plain text
       const text = remaining.trim();
       if (text) {
         outputs.push(
@@ -25,7 +30,7 @@ export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
       break;
     }
 
-    // Text before the plotly marker
+    // Text before the display marker
     const textBefore = remaining.substring(0, startIdx).trim();
     if (textBefore) {
       outputs.push(
@@ -35,8 +40,8 @@ export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
       );
     }
 
-    const jsonStart = startIdx + PLOTLY_START.length;
-    const endIdx = remaining.indexOf(PLOTLY_END, jsonStart);
+    const jsonStart = startIdx + DISPLAY_START.length;
+    const endIdx = remaining.indexOf(DISPLAY_END, jsonStart);
 
     if (endIdx === -1) {
       // Malformed marker — treat rest as text
@@ -53,19 +58,21 @@ export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
 
     const jsonStr = remaining.substring(jsonStart, endIdx);
     try {
-      JSON.parse(jsonStr); // validate
-      outputs.push(
-        new vscode.NotebookCellOutput([
-          new vscode.NotebookCellOutputItem(
-            new TextEncoder().encode(jsonStr),
-            "application/vnd.bunbook.plotly"
-          ),
-          vscode.NotebookCellOutputItem.text(
-            PLOTLY_FALLBACK_HTML,
-            "text/html"
-          ),
-        ])
-      );
+      const payload: { items: { mime: string; data: string }[] } =
+        JSON.parse(jsonStr);
+      const outputItems = payload.items.map((item) => {
+        if (BINARY_MIME_TYPES.has(item.mime)) {
+          // Decode base64 to Uint8Array for binary MIME types
+          const bytes = Uint8Array.from(Buffer.from(item.data, "base64"));
+          return new vscode.NotebookCellOutputItem(bytes, item.mime);
+        }
+        // Text-based MIME type
+        return new vscode.NotebookCellOutputItem(
+          new TextEncoder().encode(item.data),
+          item.mime
+        );
+      });
+      outputs.push(new vscode.NotebookCellOutput(outputItems));
     } catch {
       // Invalid JSON — output as text
       outputs.push(
@@ -75,7 +82,7 @@ export function parseOutput(stdout: string): vscode.NotebookCellOutput[] {
       );
     }
 
-    remaining = remaining.substring(endIdx + PLOTLY_END.length);
+    remaining = remaining.substring(endIdx + DISPLAY_END.length);
   }
 
   return outputs;

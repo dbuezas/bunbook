@@ -512,6 +512,25 @@ declare namespace Plotly {
     config?: Partial<Config>
   ): void;
 }
+
+interface DisplayFunction {
+  /** Generic display: raw string + MIME type */
+  (data: string, mime?: string): void;
+  /** Multi-MIME display: record of MIME type → data */
+  (record: Record<string, string>): void;
+  /** Display HTML content */
+  html(html: string): void;
+  /** Display an image from a buffer (defaults to image/png) */
+  image(buffer: Buffer | Uint8Array, mime?: string): void;
+  /** Display Markdown content */
+  markdown(md: string): void;
+  /** Display a JSON object */
+  json(obj: any): void;
+  /** Display SVG content */
+  svg(svg: string): void;
+}
+
+declare const display: DisplayFunction;
 `;
 
 const AMBIENT_FILE = "/___bunbook_ambient___.d.ts";

@@ -6,7 +6,7 @@ import * as crypto from "crypto";
 interface IpynbCodeCell {
   cell_type: "code";
   id?: string;
-  source: string[];
+  source: string[] | string;
   metadata: Record<string, unknown>;
   outputs: unknown[];
   execution_count: number | null;
@@ -15,7 +15,7 @@ interface IpynbCodeCell {
 interface IpynbMarkdownCell {
   cell_type: "markdown";
   id?: string;
-  source: string[];
+  source: string[] | string;
   metadata: Record<string, unknown>;
 }
 
@@ -92,7 +92,7 @@ export class BunbookSerializer implements vscode.NotebookSerializer {
           : vscode.NotebookCellKind.Code;
       const language =
         cell.cell_type === "markdown" ? "markdown" : "typescript";
-      const value = Array.isArray(cell.source) ? cell.source.join("") : "";
+      const value = Array.isArray(cell.source) ? cell.source.join("") : typeof cell.source === "string" ? cell.source : "";
       const cellData = new vscode.NotebookCellData(kind, value, language);
 
       if (cell.id) {

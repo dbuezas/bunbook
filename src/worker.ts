@@ -10,16 +10,65 @@ import { transformDeclarations, extractVarNames } from "./transformCode.js";
 
 const EVAL_START = "___EVAL_START___";
 const EVAL_END = "___EVAL_END___";
+const DISPLAY_START = "___DISPLAY_OUTPUT___";
+const DISPLAY_END = "___END_DISPLAY___";
+
+const PLOTLY_FALLBACK_HTML = `<p style="color:#888;font-size:13px">Plotly chart — install <a href="https://marketplace.visualstudio.com/items?itemName=DavidBuezas.bunbook">BunBook</a> in VS Code to view interactive plots.</p>`;
 
 const transpiler = new Bun.Transpiler({ loader: "ts" });
 
+// Write a display payload to stdout using the marker protocol.
+// payload: { items: [{ mime: string, data: string }] }
+function writeDisplay(payload: { items: { mime: string; data: string }[] }) {
+  process.stdout.write(DISPLAY_START + JSON.stringify(payload) + DISPLAY_END);
+}
+
+// Generic display function with overloads and convenience methods.
+function display(dataOrRecord: string | Record<string, string>, mime?: string) {
+  if (typeof dataOrRecord === "string") {
+    // display("raw string", "text/plain")
+    writeDisplay({ items: [{ mime: mime || "text/plain", data: dataOrRecord }] });
+  } else {
+    // display({ "text/html": "<b>hi</b>", "text/plain": "hi" })
+    const items = Object.entries(dataOrRecord).map(([m, d]) => ({ mime: m, data: d }));
+    writeDisplay({ items });
+  }
+}
+
+display.html = (html: string) => {
+  writeDisplay({ items: [{ mime: "text/html", data: html }] });
+};
+
+display.image = (buffer: Buffer | Uint8Array, mime: string = "image/png") => {
+  const b64 = Buffer.from(buffer).toString("base64");
+  writeDisplay({ items: [{ mime, data: b64 }] });
+};
+
+display.markdown = (md: string) => {
+  writeDisplay({ items: [{ mime: "text/markdown", data: md }] });
+};
+
+display.json = (obj: any) => {
+  writeDisplay({ items: [{ mime: "application/json", data: JSON.stringify(obj, null, 2) }] });
+};
+
+display.svg = (svg: string) => {
+  writeDisplay({ items: [{ mime: "image/svg+xml", data: svg }] });
+};
+
+(globalThis as any).display = display;
+
 // Provide Plotly.newPlot globally so cells can call it directly.
-// Instead of rendering, it serializes the data as a marker for the renderer.
-// Uses process.stdout.write (not console.log, which truncates large arrays).
+// Uses the display() marker protocol internally.
 (globalThis as any).Plotly = {
   newPlot(data: any[], layout?: any, config?: any) {
     const json = JSON.stringify({ data, layout, config });
-    process.stdout.write("___PLOTLY_OUTPUT___" + json + "___END_PLOTLY___");
+    writeDisplay({
+      items: [
+        { mime: "application/vnd.bunbook.plotly", data: json },
+        { mime: "text/html", data: PLOTLY_FALLBACK_HTML },
+      ],
+    });
   },
 };
 
