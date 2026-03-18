@@ -6,10 +6,13 @@ import { tmpdir } from "os";
 const CLI = join(import.meta.dir, "..", "dist", "index.js");
 const HELLO_NB = join(import.meta.dir, "..", "..", "examples", "hello-world", "hello-world.ipynb");
 
+const CLI_DIR = join(import.meta.dir, "..");
+
 let tmp: string;
 
 beforeAll(() => {
   tmp = mkdtempSync(join(tmpdir(), "bunbook-cli-test-"));
+  Bun.spawnSync(["bun", "run", "build"], { cwd: CLI_DIR });
 });
 
 afterAll(() => {
