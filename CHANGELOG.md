@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0
+
+- **`--hide-code` / `--hide-output` flags** on `export-html` and `export-md` — generate output-only reports or code-only documentation by stripping code cells or outputs from the export
+- **`-r` alias** for `--run` on all export commands (`export-html`, `export-md`, `export-ts`)
+
 ## 1.0.2
 
 - Fix CI publish pipeline (correct step ordering and npm authentication)
