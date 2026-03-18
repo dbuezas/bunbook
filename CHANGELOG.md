@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.13
+
+- **CLI** — new `bunbook-cli` npm package for running and converting notebooks from the terminal or CI. No install needed with `bunx bunbook-cli`. Commands: `run`, `export-ts`, `export-html`, `export-md`, `import-ts`, `remove-outputs`
+- **`--run` flag** on all export commands — execute the notebook before exporting in a single step
+- **Toolbar overflow menu** — save-outputs toggle and all export commands moved to the `...` overflow menu instead of cluttering the toolbar icon strip
+- **Export commands in toolbar** — Export to TypeScript, HTML, Markdown, and Import from TypeScript are now accessible directly from the notebook toolbar overflow menu
+- **Tests** — comprehensive test suite covering output parsing, code transformation, export/import, and CLI end-to-end
+
 ## 0.0.12
 
 - **`display.plotly()`** — new method for rendering interactive Plotly charts, consistent with the rest of the `display.*` API
