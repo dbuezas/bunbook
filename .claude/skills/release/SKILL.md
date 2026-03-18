@@ -6,7 +6,7 @@ Use when the user types /release. Bumps the package version, updates the changel
 
 1. **Determine the version bump**: Ask the user which semver component to bump (patch, minor, or major). Default to patch.
 
-2. **Bump the version** in `package.json` by editing the `"version"` field.
+2. **Bump the version** in both `package.json` and `cli/package.json` by editing the `"version"` field in each.
 
 3. **Generate the changelog entry**:
    - Find the latest git tag (e.g. `v0.0.5`) using `git describe --tags --abbrev=0`.
@@ -26,8 +26,8 @@ Use when the user types /release. Bumps the package version, updates the changel
 ## Important
 
 - The changelog file is `CHANGELOG.md` (uppercase). Do NOT create or edit `changelog.md` (lowercase).
-- Both `package.json` and `CHANGELOG.md` must be in a single commit. Never commit one without the other.
-- Stage both files explicitly by name: `git add package.json CHANGELOG.md`.
+- Both `package.json`, `cli/package.json`, and `CHANGELOG.md` must be in a single commit. Never commit one without the others.
+- Stage all three files explicitly by name: `git add package.json cli/package.json CHANGELOG.md`.
 - The commit and tag must happen in one command chain: `git add ... && git commit -m "v<version>" && git tag v<version>`.
 - Follow the existing CHANGELOG.md format exactly (see existing entries for style).
 - Do NOT include the `Co-Authored-By` trailer in the commit message for this skill.
