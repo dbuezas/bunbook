@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- Fix CI publish pipeline (correct step ordering and npm authentication)
+
 ## 1.0.1
 
 - Fix CLI npm publish in CI

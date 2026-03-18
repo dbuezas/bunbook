@@ -16,6 +16,9 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - run: bun install
       - run: bun run compile
+      - run: bun run publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
       - name: Publish CLI to npm
         working-directory: cli
         run: |
@@ -24,6 +27,3 @@ jobs:
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: bun run publish
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
