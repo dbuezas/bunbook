@@ -18,6 +18,7 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
       - run: bun install
+      - run: bun run compile
       - name: Publish CLI to npm
         working-directory: cli
         run: |
