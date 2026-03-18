@@ -7,6 +7,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -15,7 +18,6 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
       - run: bun install
-      - run: bun run compile
       - run: bun run publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
@@ -26,5 +28,3 @@ jobs:
           npm version "$VERSION" --no-git-tag-version
           bun run build:prod
           npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

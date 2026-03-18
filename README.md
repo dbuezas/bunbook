@@ -115,49 +115,15 @@ All of these are also available via the Command Palette (`Cmd+Shift+P` / `Ctrl+S
 
 ## CLI
 
-The `bunbook` CLI lets you run and convert notebooks from the terminal or CI pipelines. No install needed — use `bunx`:
+The [`bunbook-cli`](https://www.npmjs.com/package/bunbook-cli) package lets you run and convert notebooks from the terminal or CI pipelines — no install needed with `bunx`:
 
 ```sh
-bunx bunbook-cli --help
-```
-
-```
-TypeScript notebook runner and converter (bunbook)
-
-USAGE bunbook run|export-ts|import-ts|export-html|export-md|remove-outputs
-
-COMMANDS
-
-             run    Execute all cells and save outputs to .ipynb
-       export-ts    Convert notebook to a runnable .ts file
-       import-ts    Convert a .ts file (with // %% separators) to a notebook
-     export-html    Export notebook to self-contained .html with interactive charts
-       export-md    Export notebook to .md
-  remove-outputs    Strip all outputs and execution counts from a notebook
-
-Use bunbook <command> --help for more information about a command.
-```
-
-All export commands accept `-o, --output <path>` and `--run` (execute before exporting).
-
-Examples:
-
-```sh
-# Run a notebook and save outputs
-bunx bunbook-cli run notebook.ipynb
-bunx bunbook-cli run notebook.ipynb -o result.ipynb
-
-# Export (optionally running first)
+bunx bunbook-cli run notebook.ipynb           # execute cells, save outputs
 bunx bunbook-cli export-html notebook.ipynb --run -o report.html
-bunx bunbook-cli export-md notebook.ipynb -o README.md
-bunx bunbook-cli export-ts notebook.ipynb -o script.ts
-
-# Round-trip between .ts and .ipynb
-bunx bunbook-cli import-ts script.ts -o notebook.no-output.ipynb
-
-# Strip outputs before committing
-bunx bunbook-cli remove-outputs notebook.ipynb
+bunx bunbook-cli remove-outputs notebook.ipynb  # strip outputs before committing
 ```
+
+See the [CLI README](cli/README.md) for full documentation.
 
 ## Examples
 
