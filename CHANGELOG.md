@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+
+- Fix CLI npm publish in CI
+
 ## 1.0.0
 
 - **CLI** — new `bunbook-cli` npm package for running and converting notebooks from the terminal or CI. No install needed with `bunx bunbook-cli`. Commands: `run`, `export-ts`, `export-html`, `export-md`, `import-ts`, `remove-outputs`
