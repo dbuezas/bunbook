@@ -44,27 +44,30 @@ Toggling renames the file between `.ipynb` and `.no-output.ipynb`. Your unsaved 
 Use `display()` to render rich content in cell outputs:
 
 ```typescript
-display.html("<h1>Hello World</h1>")
-display.markdown("## Bold **text**")
-display.json({ name: "test", value: 42 })
-display.svg('<svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>')
-display.image(pngBuffer)                    // Buffer | Uint8Array, defaults to image/png
-display.image(jpegBuffer, "image/jpeg")     // explicit MIME
-display.plotly([{ x: [1, 2], y: [1, 4], type: "scatter" }]) // interactive Plotly chart
-display("raw string", "text/plain")         // generic: data + MIME
-display({ "text/html": "<b>hi</b>", "text/plain": "hi" }) // multi-MIME
+display.html("<h1>Hello World</h1>");
+display.markdown("## Bold **text**");
+display.json({ name: "test", value: 42 });
+display.svg(
+  '<svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>'
+);
+display.image(pngBuffer); // Buffer | Uint8Array, defaults to image/png
+display.image(jpegBuffer, "image/jpeg"); // explicit MIME
+display.plotly([{ x: [1, 2], y: [1, 4], type: "scatter" }]); // interactive Plotly chart
+display("raw string", "text/plain"); // generic: data + MIME
+display({ "text/html": "<b>hi</b>", "text/plain": "hi" }); // multi-MIME
 ```
 
 Combine with CLI tools for even more output types:
 
 ```typescript
 // Matplotlib plot
-const png = await Bun.$`python3 -c ${matplotlibScript}`.arrayBuffer()
-display.image(new Uint8Array(png))
+const png = await Bun.$`python3 -c ${matplotlibScript}`.arrayBuffer();
+display.image(new Uint8Array(png));
 
 // Mermaid diagram
-const svg = await Bun.$`bunx -p @mermaid-js/mermaid-cli mmdc -i - -o - -e svg < ${diagram}`.text()
-display.svg(svg)
+const svg =
+  await Bun.$`bunx -p @mermaid-js/mermaid-cli mmdc -i - -o - -e svg < ${diagram}`.text();
+display.svg(svg);
 ```
 
 ## Plotly Charts
@@ -94,6 +97,66 @@ import { mean, standardDeviation } from "simple-statistics";
 
 const data = [1, 2, 3, 4, 5];
 console.log(mean(data));
+```
+
+## Toolbar & Command Palette
+
+The notebook toolbar `...` overflow menu exposes:
+
+| Command                                  | Description                                                         |
+| ---------------------------------------- | ------------------------------------------------------------------- |
+| **BunBook: Enable/Disable saving outputs** | Toggle whether outputs are persisted in the file                  |
+| **BunBook: Export to TypeScript File**   | Save notebook as a `.ts` file with `// %%` cell separators          |
+| **BunBook: Import from TypeScript File** | Convert a `.ts` file back to a notebook                             |
+| **BunBook: Export to HTML**              | Export to a self-contained HTML file with interactive Plotly charts |
+| **BunBook: Export to Markdown**          | Export to a `.md` file with fenced code blocks                      |
+
+All of these are also available via the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`).
+
+## CLI
+
+The `bunbook` CLI lets you run and convert notebooks from the terminal or CI pipelines. No install needed — use `bunx`:
+
+```sh
+bunx bunbook-cli --help
+```
+
+```
+TypeScript notebook runner and converter (bunbook)
+
+USAGE bunbook run|export-ts|import-ts|export-html|export-md|remove-outputs
+
+COMMANDS
+
+             run    Execute all cells and save outputs to .ipynb
+       export-ts    Convert notebook to a runnable .ts file
+       import-ts    Convert a .ts file (with // %% separators) to a notebook
+     export-html    Export notebook to self-contained .html with interactive charts
+       export-md    Export notebook to .md
+  remove-outputs    Strip all outputs and execution counts from a notebook
+
+Use bunbook <command> --help for more information about a command.
+```
+
+All export commands accept `-o, --output <path>` and `--run` (execute before exporting).
+
+Examples:
+
+```sh
+# Run a notebook and save outputs
+bunx bunbook-cli run notebook.ipynb
+bunx bunbook-cli run notebook.ipynb -o result.ipynb
+
+# Export (optionally running first)
+bunx bunbook-cli export-html notebook.ipynb --run -o report.html
+bunx bunbook-cli export-md notebook.ipynb -o README.md
+bunx bunbook-cli export-ts notebook.ipynb -o script.ts
+
+# Round-trip between .ts and .ipynb
+bunx bunbook-cli import-ts script.ts -o notebook.no-output.ipynb
+
+# Strip outputs before committing
+bunx bunbook-cli remove-outputs notebook.ipynb
 ```
 
 ## Examples

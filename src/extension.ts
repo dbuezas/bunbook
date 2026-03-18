@@ -1,7 +1,10 @@
 import * as vscode from "vscode";
+import * as path from "path";
 import { BunbookSerializer } from "./serializer";
 import { BunbookController } from "./controller";
 import { BunbookIntellisense } from "./intellisense";
+import { parseIpynb, sourceToString, type IpynbCell } from "./ipynb";
+import { notebookToTypeScript, typeScriptToNotebook, notebookToHtml, notebookToMarkdown } from "./exportImport";
 
 let controller: BunbookController;
 let intellisense: BunbookIntellisense;
@@ -197,6 +200,82 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("bunbook.enableSaveOutputs", toggleSaveOutputs),
     vscode.commands.registerCommand("bunbook.disableSaveOutputs", toggleSaveOutputs)
+  );
+
+  // ── Export / Import commands ──────────────────────────────────────────────
+
+  function notebookCellsToIpynb(notebook: vscode.NotebookDocument): IpynbCell[] {
+    const cells: IpynbCell[] = [];
+    for (let i = 0; i < notebook.cellCount; i++) {
+      const cell = notebook.cellAt(i);
+      const source = cell.document.getText();
+      if (cell.kind === vscode.NotebookCellKind.Markup) {
+        cells.push({ cell_type: "markdown", source, metadata: {} });
+      } else {
+        cells.push({ cell_type: "code", source, metadata: {}, outputs: [], execution_count: null });
+      }
+    }
+    return cells;
+  }
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("bunbook.exportToTypeScript", async () => {
+      const notebook = vscode.window.activeNotebookEditor?.notebook;
+      if (!notebook) return;
+      const cells = notebookCellsToIpynb(notebook);
+      const content = notebookToTypeScript(cells);
+      const defaultUri = vscode.Uri.file(notebook.uri.fsPath.replace(/\.no-output\.ipynb$|\.ipynb$/, ".ts"));
+      const dest = await vscode.window.showSaveDialog({ defaultUri, filters: { TypeScript: ["ts"] } });
+      if (!dest) return;
+      await vscode.workspace.fs.writeFile(dest, Buffer.from(content, "utf-8"));
+      vscode.window.showInformationMessage(`Exported to ${path.basename(dest.fsPath)}`);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("bunbook.importFromTypeScript", async () => {
+      const uris = await vscode.window.showOpenDialog({ filters: { TypeScript: ["ts"] } });
+      if (!uris?.length) return;
+      const content = Buffer.from(await vscode.workspace.fs.readFile(uris[0])).toString("utf-8");
+      const notebook = typeScriptToNotebook(content);
+      const destUri = vscode.Uri.file(uris[0].fsPath.replace(/\.ts$/, ".no-output.ipynb"));
+      await vscode.workspace.fs.writeFile(destUri, Buffer.from(JSON.stringify(notebook, null, 1) + "\n", "utf-8"));
+      await vscode.commands.executeCommand("vscode.openWith", destUri, "bunbook");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("bunbook.exportToHtml", async () => {
+      const notebook = vscode.window.activeNotebookEditor?.notebook;
+      if (!notebook) return;
+      // Read raw ipynb from disk to get saved outputs
+      const raw = Buffer.from(await vscode.workspace.fs.readFile(notebook.uri)).toString("utf-8");
+      const parsed = parseIpynb(raw);
+      if (!parsed) { vscode.window.showErrorMessage("Could not parse notebook"); return; }
+      const title = path.basename(notebook.uri.fsPath).replace(/\.no-output\.ipynb$|\.ipynb$/, "");
+      const html = notebookToHtml(title, parsed.cells);
+      const defaultUri = vscode.Uri.file(notebook.uri.fsPath.replace(/\.no-output\.ipynb$|\.ipynb$/, ".html"));
+      const dest = await vscode.window.showSaveDialog({ defaultUri, filters: { HTML: ["html"] } });
+      if (!dest) return;
+      await vscode.workspace.fs.writeFile(dest, Buffer.from(html, "utf-8"));
+      vscode.window.showInformationMessage(`Exported to ${path.basename(dest.fsPath)}`);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("bunbook.exportToMarkdown", async () => {
+      const notebook = vscode.window.activeNotebookEditor?.notebook;
+      if (!notebook) return;
+      const raw = Buffer.from(await vscode.workspace.fs.readFile(notebook.uri)).toString("utf-8");
+      const parsed = parseIpynb(raw);
+      if (!parsed) { vscode.window.showErrorMessage("Could not parse notebook"); return; }
+      const md = notebookToMarkdown(parsed.cells);
+      const defaultUri = vscode.Uri.file(notebook.uri.fsPath.replace(/\.no-output\.ipynb$|\.ipynb$/, ".md"));
+      const dest = await vscode.window.showSaveDialog({ defaultUri, filters: { Markdown: ["md"] } });
+      if (!dest) return;
+      await vscode.workspace.fs.writeFile(dest, Buffer.from(md, "utf-8"));
+      vscode.window.showInformationMessage(`Exported to ${path.basename(dest.fsPath)}`);
+    })
   );
 
   // Kill worker when a notebook is closed

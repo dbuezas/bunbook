@@ -1,4 +1,4 @@
-name: Publish Extension
+name: Publish Extension & CLI
 
 on:
   push:
@@ -10,7 +10,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
       - run: bun install
+      - run: bun run compile
       - run: bun run publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Publish CLI to npm
+        working-directory: cli
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version
+          bun run build:prod
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -13,7 +13,7 @@
         "@types/vscode": "^1.85.0",
         "@types/vscode-notebook-renderer": "^1.72.3",
         "@vscode/vsce": "^3.7.1",
-        "acorn": "^8.14.0",
+        "acorn": "^8.16.0",
         "astring": "^1.9.0",
         "typescript": "^5.3.0",
       },

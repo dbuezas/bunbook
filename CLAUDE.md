@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working Guidelines
+
+- After changing code, run the relevant tests (`bun test`). Add new tests when the change is non-trivial.
+- Keep `README.md` in sync with any user-facing changes (CLI commands, new flags, features, examples).
+- Keep example notebooks (`examples/`) in sync if the change affects how notebooks are written or executed.
+
 ## Build & Dev Commands
 
 ```sh

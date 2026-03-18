@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+export { parseOutputRaw, type RawOutput, type RawOutputItem } from "./outputParserRaw";
 
 const DISPLAY_START = "___DISPLAY_OUTPUT___";
 const DISPLAY_END = "___END_DISPLAY___";

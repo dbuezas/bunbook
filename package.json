@@ -50,15 +50,31 @@
       },
       {
         "command": "bunbook.enableSaveOutputs",
-        "title": "BunBook: Outputs NOT saved to file (click to enable)",
-        "shortTitle": "Save Outputs Off",
+        "title": "BunBook: Enable saving outputs to file",
+        "shortTitle": "BunBook: Enable saving outputs",
         "icon": "$(circle-large-outline)"
       },
       {
         "command": "bunbook.disableSaveOutputs",
-        "title": "BunBook: Outputs saved to file (click to disable for cleaner diffs)",
-        "shortTitle": "Save Outputs On",
+        "title": "BunBook: Disable saving outputs to file",
+        "shortTitle": "BunBook: Disable saving outputs",
         "icon": "$(pass-filled)"
+      },
+      {
+        "command": "bunbook.exportToTypeScript",
+        "title": "BunBook: Export to TypeScript File"
+      },
+      {
+        "command": "bunbook.importFromTypeScript",
+        "title": "BunBook: Import from TypeScript File"
+      },
+      {
+        "command": "bunbook.exportToHtml",
+        "title": "BunBook: Export to HTML"
+      },
+      {
+        "command": "bunbook.exportToMarkdown",
+        "title": "BunBook: Export to Markdown"
       }
     ],
     "menus": {
@@ -70,13 +86,33 @@
         },
         {
           "command": "bunbook.enableSaveOutputs",
-          "group": "navigation/execute@2",
+          "group": "bunbook@1",
           "when": "(notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller') && !bunbook.persistOutputs"
         },
         {
           "command": "bunbook.disableSaveOutputs",
-          "group": "navigation/execute@2",
+          "group": "bunbook@1",
           "when": "(notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller') && bunbook.persistOutputs"
+        },
+        {
+          "command": "bunbook.exportToTypeScript",
+          "group": "bunbook@2",
+          "when": "notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller'"
+        },
+        {
+          "command": "bunbook.importFromTypeScript",
+          "group": "bunbook@3",
+          "when": "notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller'"
+        },
+        {
+          "command": "bunbook.exportToHtml",
+          "group": "bunbook@4",
+          "when": "notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller'"
+        },
+        {
+          "command": "bunbook.exportToMarkdown",
+          "group": "bunbook@5",
+          "when": "notebookType == 'bunbook' || notebookKernel == 'DavidBuezas.bunbook/bunbook-jupyter-controller'"
         }
       ],
       "commandPalette": [
@@ -105,7 +141,8 @@
     "vscode:prepublish": "bun build.ts --production",
     "compile": "bun build.ts",
     "start": "rm -f bunbook-*.vsix && vsce package && code --install-extension bunbook-*.vsix",
-    "publish": "vsce publish"
+    "publish": "vsce publish",
+    "test": "bun test"
   },
   "dependencies": {
     "@types/bun": "^1.3.10",
@@ -117,7 +154,7 @@
     "@types/vscode": "^1.85.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
     "@vscode/vsce": "^3.7.1",
-    "acorn": "^8.14.0",
+    "acorn": "^8.16.0",
     "astring": "^1.9.0",
     "typescript": "^5.3.0"
   }

@@ -1,0 +1,31 @@
+{
+  "name": "bunbook-cli",
+  "version": "0.0.1",
+  "description": "CLI for BunBook — run, export, and convert TypeScript notebooks",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dbuezas/bunbook.git"
+  },
+  "keywords": [
+    "typescript",
+    "notebook",
+    "jupyter",
+    "bun",
+    "cli"
+  ],
+  "bin": {
+    "bunbook": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build.ts",
+    "build:prod": "bun build.ts --production"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "citty": "^0.2.1"
+  }
+}
