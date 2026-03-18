@@ -2,7 +2,7 @@
   "name": "bunbook",
   "displayName": "BunBook",
   "description": "Run TypeScript as a native VS Code notebook with Plotly support",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "publisher": "DavidBuezas",
   "license": "MIT",
   "repository": "https://github.com/dbuezas/bunbook",
