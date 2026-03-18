@@ -48,6 +48,8 @@ Export to a self-contained HTML file with interactive Plotly charts.
 bunx bunbook-cli export-html notebook.ipynb
 bunx bunbook-cli export-html notebook.ipynb -o report.html
 bunx bunbook-cli export-html notebook.ipynb --run          # execute first, then export
+bunx bunbook-cli export-html notebook.ipynb --hide-output    # code only, no outputs
+bunx bunbook-cli export-html notebook.ipynb --hide-code      # outputs only, no code
 ```
 
 ### `export-md`
@@ -58,6 +60,8 @@ Export to a Markdown file with fenced code blocks.
 bunx bunbook-cli export-md notebook.ipynb
 bunx bunbook-cli export-md notebook.ipynb -o README.md
 bunx bunbook-cli export-md notebook.ipynb --run
+bunx bunbook-cli export-md notebook.ipynb --hide-output      # code only, no outputs
+bunx bunbook-cli export-md notebook.ipynb --hide-code        # outputs only, no code
 ```
 
 ### `export-ts`
@@ -99,9 +103,16 @@ All commands accept:
 
 Export commands (`export-html`, `export-md`, `export-ts`) additionally accept:
 
-| Flag | Description |
-|---|---|
-| `--run` | Execute the notebook before exporting |
+| Flag | Short | Description |
+|---|---|---|
+| `--run` | `-r` | Execute the notebook before exporting |
+
+`export-html` and `export-md` additionally accept:
+
+| Flag | Short | Description |
+|---|---|---|
+| `--hide-code` | `-C` | Exclude code (show only outputs and markdown) |
+| `--hide-output` | `-O` | Exclude outputs (show only code and markdown) |
 
 ## CI Example
 

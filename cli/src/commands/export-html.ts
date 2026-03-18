@@ -23,7 +23,18 @@ export default defineCommand({
     },
     run: {
       type: "boolean",
+      alias: "r",
       description: "Execute the notebook before exporting",
+    },
+    "hide-code": {
+      type: "boolean",
+      alias: "C",
+      description: "Exclude code cells (show only outputs and markdown)",
+    },
+    "hide-output": {
+      type: "boolean",
+      alias: "O",
+      description: "Exclude outputs (show only code and markdown)",
     },
   },
   async run({ args }) {
@@ -35,8 +46,16 @@ export default defineCommand({
       : parseIpynb(fs.readFileSync(inputPath, "utf-8"));
     if (!notebook) { console.error(`Error: could not parse notebook: ${inputPath}`); process.exit(1); }
 
+    let cells = notebook.cells;
+    if (args["hide-code"]) {
+      cells = cells.map(c => c.cell_type === "code" ? { ...c, source: [] } : c);
+    }
+    if (args["hide-output"]) {
+      cells = cells.map(c => c.cell_type === "code" ? { ...c, outputs: [] } : c);
+    }
+
     const title = path.basename(inputPath).replace(/\.no-output\.ipynb$|\.ipynb$/, "");
-    fs.writeFileSync(outputPath, notebookToHtml(title, notebook.cells), "utf-8");
+    fs.writeFileSync(outputPath, notebookToHtml(title, cells), "utf-8");
     console.error(`[bunbook] Written to ${path.basename(outputPath)}`);
   },
 });

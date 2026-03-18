@@ -4,7 +4,7 @@ Use when the user types /release. Bumps the package version, updates the changel
 
 ## Steps
 
-1. **Determine the version bump**: Ask the user which semver component to bump (patch, minor, or major). Default to patch.
+1. **Determine the new version**: Read the current version from the root `package.json`. Present the user with three options — patch, minor, and major bumps — showing the resulting version for each (e.g. if current is `1.0.2`: patch → `1.0.3`, minor → `1.1.0`, major → `2.0.0`). Default to patch.
 
 2. **Bump the version** in both `package.json` and `cli/package.json` by editing the `"version"` field in each.
 

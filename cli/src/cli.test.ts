@@ -115,6 +115,59 @@ describe("export-md", () => {
   });
 });
 
+// ── --hide-code / --hide-output ─────────────────────────────────────────
+
+describe("--hide-code", () => {
+  test("export-html --hide-code excludes code from output", () => {
+    const out = join(tmp, "hide-code.html");
+    const { exitCode } = run(["export-html", HELLO_NB, "--hide-code", "--output", out]);
+    expect(exitCode).toBe(0);
+    const content = readFileSync(out, "utf-8");
+    expect(content).not.toContain("console.log");
+    expect(content).toContain("<!DOCTYPE html>");
+  });
+
+  test("export-md --hide-code excludes code from output", () => {
+    const out = join(tmp, "hide-code.md");
+    const { exitCode } = run(["export-md", HELLO_NB, "--hide-code", "--output", out]);
+    expect(exitCode).toBe(0);
+    const content = readFileSync(out, "utf-8");
+    expect(content).not.toContain("console.log");
+  });
+});
+
+describe("--hide-output", () => {
+  test("export-html --run --hide-output excludes outputs", () => {
+    const out = join(tmp, "hide-output.html");
+    const { exitCode } = run(["export-html", HELLO_NB, "--run", "--hide-output", "--output", out]);
+    expect(exitCode).toBe(0);
+    const content = readFileSync(out, "utf-8");
+    expect(content).toContain("console.log");
+    expect(content).not.toContain("class=\"outputs\"");
+  });
+
+  test("export-md --run --hide-output excludes outputs", () => {
+    const out = join(tmp, "hide-output.md");
+    const { exitCode } = run(["export-md", HELLO_NB, "--run", "--hide-output", "--output", out]);
+    expect(exitCode).toBe(0);
+    const content = readFileSync(out, "utf-8");
+    expect(content).toContain("console.log");
+    expect(content).not.toContain("┌");
+  });
+}, 30_000);
+
+// ── -r alias ────────────────────────────────────────────────────────────
+
+describe("-r alias", () => {
+  test("export-html -r works like --run", () => {
+    const out = join(tmp, "alias-r.html");
+    const { exitCode } = run(["export-html", HELLO_NB, "-r", "--output", out]);
+    expect(exitCode).toBe(0);
+    const content = readFileSync(out, "utf-8");
+    expect(content).toContain("Hello console!");
+  });
+}, 30_000);
+
 // ── --run flag ──────────────────────────────────────────────────────────
 
 describe("--run flag", () => {

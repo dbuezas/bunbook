@@ -23,6 +23,7 @@ export default defineCommand({
     },
     run: {
       type: "boolean",
+      alias: "r",
       description: "Execute the notebook before exporting",
     },
   },
