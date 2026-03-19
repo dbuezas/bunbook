@@ -56,6 +56,15 @@ export class BunbookController {
     controller.supportsExecutionOrder = true;
     controller.executeHandler = this._executeAll.bind(this);
     controller.interruptHandler = () => this.restart();
+    controller.onDidChangeSelectedNotebooks(async ({ notebook, selected }) => {
+      if (!selected) return;
+      for (let i = 0; i < notebook.cellCount; i++) {
+        const cell = notebook.cellAt(i);
+        if (cell.kind === vscode.NotebookCellKind.Code && cell.document.languageId !== "typescript") {
+          await vscode.languages.setTextDocumentLanguage(cell.document, "typescript");
+        }
+      }
+    });
   }
 
   set onWorkersChanged(cb: (() => void) | undefined) {

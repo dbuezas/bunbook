@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- **Auto-set cell language to TypeScript** — when selecting the BunBook kernel on a `.ipynb` notebook, existing code cells are automatically switched from Python (or any other language) to TypeScript
+
 ## 1.2.0
 
 - **Streaming cell output** — cell output now appears incrementally during execution instead of all at once when the cell finishes. Includes debounced flush for partial lines (e.g. `process.stdout.write` without newline)
