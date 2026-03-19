@@ -1,6 +1,6 @@
 {
   "name": "bunbook-cli",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "CLI for BunBook — run, export, and convert TypeScript notebooks",
   "license": "MIT",
   "repository": {

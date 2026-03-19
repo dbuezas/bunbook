@@ -2,6 +2,8 @@
 
 A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). Fast startup, shared state across cells, inline Plotly charts, and full TypeScript intellisense.
 
+Also comes with a CLI to run and export without vscode (see below).
+
 ## [Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=DavidBuezas.bunbook)
 
 ![demo](https://github.com/user-attachments/assets/ff75308f-2340-4b2e-815e-e2c474829b9e)
@@ -103,13 +105,13 @@ console.log(mean(data));
 
 The notebook toolbar `...` overflow menu exposes:
 
-| Command                                  | Description                                                         |
-| ---------------------------------------- | ------------------------------------------------------------------- |
-| **BunBook: Enable/Disable saving outputs** | Toggle whether outputs are persisted in the file                  |
-| **BunBook: Export to TypeScript File**   | Save notebook as a `.ts` file with `// %%` cell separators          |
-| **BunBook: Import from TypeScript File** | Convert a `.ts` file back to a notebook                             |
-| **BunBook: Export to HTML**              | Export to a self-contained HTML file with interactive Plotly charts |
-| **BunBook: Export to Markdown**          | Export to a `.md` file with fenced code blocks                      |
+| Command                                    | Description                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| **BunBook: Enable/Disable saving outputs** | Toggle whether outputs are persisted in the file                    |
+| **BunBook: Export to TypeScript File**     | Save notebook as a `.ts` file with `// %%` cell separators          |
+| **BunBook: Import from TypeScript File**   | Convert a `.ts` file back to a notebook                             |
+| **BunBook: Export to HTML**                | Export to a self-contained HTML file with interactive Plotly charts |
+| **BunBook: Export to Markdown**            | Export to a `.md` file with fenced code blocks                      |
 
 All of these are also available via the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`).
 

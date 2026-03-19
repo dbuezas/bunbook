@@ -123,7 +123,7 @@ describe("--hide-code", () => {
     const { exitCode } = run(["export-html", HELLO_NB, "--hide-code", "--output", out]);
     expect(exitCode).toBe(0);
     const content = readFileSync(out, "utf-8");
-    expect(content).not.toContain("console.log");
+    expect(content).not.toContain("console.table");
     expect(content).toContain("<!DOCTYPE html>");
   });
 
@@ -132,7 +132,7 @@ describe("--hide-code", () => {
     const { exitCode } = run(["export-md", HELLO_NB, "--hide-code", "--output", out]);
     expect(exitCode).toBe(0);
     const content = readFileSync(out, "utf-8");
-    expect(content).not.toContain("console.log");
+    expect(content).not.toContain("console.table");
   });
 });
 
@@ -142,7 +142,7 @@ describe("--hide-output", () => {
     const { exitCode } = run(["export-html", HELLO_NB, "--run", "--hide-output", "--output", out]);
     expect(exitCode).toBe(0);
     const content = readFileSync(out, "utf-8");
-    expect(content).toContain("console.log");
+    expect(content).toContain("console.table");
     expect(content).not.toContain("class=\"outputs\"");
   });
 
@@ -151,7 +151,7 @@ describe("--hide-output", () => {
     const { exitCode } = run(["export-md", HELLO_NB, "--run", "--hide-output", "--output", out]);
     expect(exitCode).toBe(0);
     const content = readFileSync(out, "utf-8");
-    expect(content).toContain("console.log");
+    expect(content).toContain("console.table");
     expect(content).not.toContain("┌");
   });
 }, 30_000);
@@ -164,7 +164,7 @@ describe("-r alias", () => {
     const { exitCode } = run(["export-html", HELLO_NB, "-r", "--output", out]);
     expect(exitCode).toBe(0);
     const content = readFileSync(out, "utf-8");
-    expect(content).toContain("Hello console!");
+    expect(content).toContain("Hello bash!");
   });
 }, 30_000);
 
@@ -177,7 +177,7 @@ describe("--run flag", () => {
     expect(exitCode).toBe(0);
     const content = readFileSync(out, "utf-8");
     expect(content).toContain("<!DOCTYPE html>");
-    expect(content).toContain("Hello console!");
+    expect(content).toContain("Hello bash!");
   });
 }, 30_000);
 
@@ -232,9 +232,9 @@ describe("remove-outputs", () => {
 describe("run", () => {
   test("executes notebook and writes outputs", () => {
     const out = join(tmp, "executed.ipynb");
-    const { exitCode, stderr } = run(["run", HELLO_NB, "--output", out]);
+    const { exitCode, stdout } = run(["run", HELLO_NB, "--output", out]);
     expect(exitCode).toBe(0);
-    expect(stderr.toString()).toContain("[bunbook]");
+    expect(stdout.toString()).toContain("[bunbook]");
 
     const nb = JSON.parse(readFileSync(out, "utf-8"));
     const codeCells = nb.cells.filter((c: any) => c.cell_type === "code");

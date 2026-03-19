@@ -37,6 +37,6 @@ export default defineCommand({
     if (!notebook) { console.error(`Error: could not parse notebook: ${inputPath}`); process.exit(1); }
 
     fs.writeFileSync(outputPath, notebookToTypeScript(notebook.cells), "utf-8");
-    console.error(`[bunbook] Written to ${path.basename(outputPath)}`);
+    console.log(`\x1b[32m[bunbook] Written to ${path.basename(outputPath)}\x1b[0m`);
   },
 });

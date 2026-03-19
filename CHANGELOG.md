@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- **Streaming cell output** — cell output now appears incrementally during execution instead of all at once when the cell finishes. Includes debounced flush for partial lines (e.g. `process.stdout.write` without newline)
+- **CLI logging cleanup** — info and success messages use `console.log` (with green coloring for success) instead of `console.error`
+- **CLI demo SVG** — added animated terminal demo to the CLI README
+- Updated hello-world example notebook and README
+
 ## 1.1.0
 
 - **`--hide-code` / `--hide-output` flags** on `export-html` and `export-md` — generate output-only reports or code-only documentation by stripping code cells or outputs from the export

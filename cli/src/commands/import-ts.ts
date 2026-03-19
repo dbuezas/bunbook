@@ -28,6 +28,6 @@ export default defineCommand({
     const notebook = typeScriptToNotebook(content);
 
     fs.writeFileSync(outputPath, JSON.stringify(notebook, null, 1) + "\n", "utf-8");
-    console.error(`[bunbook] Written ${notebook.cells.length} cells to ${path.basename(outputPath)}`);
+    console.log(`\x1b[32m[bunbook] Written ${notebook.cells.length} cells to ${path.basename(outputPath)}\x1b[0m`);
   },
 });

@@ -56,6 +56,6 @@ export default defineCommand({
 
     const title = path.basename(inputPath).replace(/\.no-output\.ipynb$|\.ipynb$/, "");
     fs.writeFileSync(outputPath, notebookToHtml(title, cells), "utf-8");
-    console.error(`[bunbook] Written to ${path.basename(outputPath)}`);
+    console.log(`\x1b[32m[bunbook] Written to ${path.basename(outputPath)}\x1b[0m`);
   },
 });

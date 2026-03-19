@@ -20,6 +20,7 @@ interface WorkerState {
   streaming: boolean;
   /** All stdout consumed so far (between OUT_START and OUT_END). */
   streamedStdout: string;
+  flushTimer: ReturnType<typeof setTimeout> | null;
 }
 
 export class BunbookController {
@@ -121,6 +122,7 @@ export class BunbookController {
       execution: null,
       streaming: false,
       streamedStdout: "",
+      flushTimer: null,
     };
 
     let ready = false;
@@ -208,11 +210,23 @@ export class BunbookController {
 
     if (outEnd === -1) {
       // OUT_END not found yet — flush up to the last newline.
-      // We keep anything after the last newline since it could be
-      // the start of an ___OUT_END___ marker (which has no newline).
       const lastNewline = state.stdoutBuffer.lastIndexOf("\n");
       if (lastNewline !== -1) {
+        if (state.flushTimer) clearTimeout(state.flushTimer);
+        state.flushTimer = null;
         this._flushStdout(state, lastNewline + 1);
+      }
+      // Debounced flush for partial lines (e.g. process.stdout.write without \n)
+      if (state.stdoutBuffer.length > 0 && !state.flushTimer) {
+        state.flushTimer = setTimeout(() => {
+          state.flushTimer = null;
+          if (state.streaming && state.stdoutBuffer.length > 0) {
+            const end = state.stdoutBuffer.indexOf(OUT_END);
+            if (end === -1) {
+              this._flushStdout(state, state.stdoutBuffer.length);
+            }
+          }
+        }, 100);
       }
       return;
     }
@@ -239,6 +253,7 @@ export class BunbookController {
       state.stderrBuffer = state.stderrBuffer.slice(errEnd + ERR_END.length);
       state.streaming = false;
       state.execution = null;
+      if (state.flushTimer) { clearTimeout(state.flushTimer); state.flushTimer = null; }
 
       const resolve = state.pendingResolve;
       state.pendingResolve = null;
@@ -267,6 +282,7 @@ export class BunbookController {
       const cancelDisposable = token.onCancellationRequested(() => {
         state.execution = null;
         state.streaming = false;
+        if (state.flushTimer) { clearTimeout(state.flushTimer); state.flushTimer = null; }
         state.pendingResolve = null;
         state.pendingReject = null;
         reject(new Error("Execution cancelled."));

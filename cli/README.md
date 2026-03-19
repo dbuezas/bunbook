@@ -2,6 +2,8 @@
 
 CLI for [BunBook](https://marketplace.visualstudio.com/items?itemName=DavidBuezas.bunbook) — run, export, and convert TypeScript notebooks from the terminal or CI pipelines.
 
+![demo](https://raw.githubusercontent.com/dbuezas/bunbook/main/cli/command.svg)
+
 ## Requirements
 
 [Bun](https://bun.sh) installed and available in your PATH.

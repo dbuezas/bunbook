@@ -55,6 +55,6 @@ export default defineCommand({
     }
 
     fs.writeFileSync(outputPath, notebookToMarkdown(cells), "utf-8");
-    console.error(`[bunbook] Written to ${path.basename(outputPath)}`);
+    console.log(`\x1b[32m[bunbook] Written to ${path.basename(outputPath)}\x1b[0m`);
   },
 });

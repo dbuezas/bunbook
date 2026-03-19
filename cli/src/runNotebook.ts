@@ -42,7 +42,7 @@ export async function runNotebook(inputPath: string, outputPath: string) {
   }
 
   const codeCells = notebook.cells.filter((c) => c.cell_type === "code");
-  console.error(`[bunbook] Running ${codeCells.length} code cells from ${path.basename(inputPath)}`);
+  console.log(`[bunbook] Running ${codeCells.length} code cells from ${path.basename(inputPath)}`);
 
   const workerInDist = path.join(import.meta.dir, "worker.ts");
   const workerInSource = path.join(import.meta.dir, "..", "..", "out", "worker.ts");
@@ -58,7 +58,7 @@ export async function runNotebook(inputPath: string, outputPath: string) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       console.error("Error: bun not found. Install it from https://bun.sh");
     } else {
-      console.error("Worker error:", err.message);
+      console.error(`Worker error: ${err.message}`);
     }
     process.exit(1);
   });
@@ -146,7 +146,7 @@ export async function runNotebook(inputPath: string, outputPath: string) {
 
   const result = { ...notebook, metadata: IPYNB_METADATA };
   fs.writeFileSync(outputPath, JSON.stringify(result, null, 1) + "\n", "utf-8");
-  console.error(`[bunbook] Written to ${path.basename(outputPath)}`);
+  console.log(`\x1b[32m[bunbook] Written to ${path.basename(outputPath)}\x1b[0m`);
 
   return result as IpynbNotebook;
 }
