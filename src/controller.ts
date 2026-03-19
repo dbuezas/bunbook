@@ -9,16 +9,17 @@ const OUT_START = "___OUT_START___";
 const OUT_END = "___OUT_END___";
 const ERR_START = "___ERR_START___";
 const ERR_END = "___ERR_END___";
-
 interface WorkerState {
   worker: ChildProcess;
   ready: Promise<void>;
   stdoutBuffer: string;
   stderrBuffer: string;
-  pendingResolve:
-    | ((result: { stdout: string; stderr: string }) => void)
-    | null;
+  pendingResolve: ((result: { stderr: string }) => void) | null;
   pendingReject: ((err: Error) => void) | null;
+  execution: vscode.NotebookCellExecution | null;
+  streaming: boolean;
+  /** All stdout consumed so far (between OUT_START and OUT_END). */
+  streamedStdout: string;
 }
 
 export class BunbookController {
@@ -117,6 +118,9 @@ export class BunbookController {
       stderrBuffer: "",
       pendingResolve: null,
       pendingReject: null,
+      execution: null,
+      streaming: false,
+      streamedStdout: "",
     };
 
     let ready = false;
@@ -172,49 +176,97 @@ export class BunbookController {
     return state.ready;
   }
 
+  /**
+   * Move content from stdoutBuffer into streamedStdout (up to `limit`)
+   * and re-render all outputs from streamedStdout.
+   */
+  private _flushStdout(state: WorkerState, limit: number): void {
+    if (!state.execution || limit <= 0) return;
+    state.streamedStdout += state.stdoutBuffer.substring(0, limit);
+    state.stdoutBuffer = state.stdoutBuffer.substring(limit);
+    state.execution.replaceOutput(parseOutput(state.streamedStdout));
+  }
+
   private _tryResolve(state: WorkerState): void {
     if (!state.pendingResolve) return;
 
-    const outStart = state.stdoutBuffer.indexOf(OUT_START);
+    // Start streaming once OUT_START is found
+    if (!state.streaming) {
+      const outStart = state.stdoutBuffer.indexOf(OUT_START);
+      if (outStart !== -1) {
+        state.stdoutBuffer = state.stdoutBuffer.slice(
+          outStart + OUT_START.length
+        );
+        state.streaming = true;
+      }
+    }
+
+    if (!state.streaming) return;
+
+    // Check for OUT_END to determine safe flush boundary
     const outEnd = state.stdoutBuffer.indexOf(OUT_END);
+
+    if (outEnd === -1) {
+      // OUT_END not found yet — flush up to the last newline.
+      // We keep anything after the last newline since it could be
+      // the start of an ___OUT_END___ marker (which has no newline).
+      const lastNewline = state.stdoutBuffer.lastIndexOf("\n");
+      if (lastNewline !== -1) {
+        this._flushStdout(state, lastNewline + 1);
+      }
+      return;
+    }
+
+    // OUT_END found — flush everything before it
+    if (outEnd > 0) {
+      this._flushStdout(state, outEnd);
+    }
+
+    // Re-find OUT_END after flush (buffer shifted)
+    const outEndNow = state.stdoutBuffer.indexOf(OUT_END);
     const errStart = state.stderrBuffer.indexOf(ERR_START);
     const errEnd = state.stderrBuffer.indexOf(ERR_END);
 
-    if (outStart !== -1 && outEnd !== -1 && errStart !== -1 && errEnd !== -1) {
-      const stdout = state.stdoutBuffer.slice(
-        outStart + OUT_START.length,
-        outEnd
-      );
+    if (outEndNow !== -1 && errStart !== -1 && errEnd !== -1) {
       const stderr = state.stderrBuffer.slice(
         errStart + ERR_START.length,
         errEnd
       );
 
-      state.stdoutBuffer = state.stdoutBuffer.slice(outEnd + OUT_END.length);
+      state.stdoutBuffer = state.stdoutBuffer.slice(
+        outEndNow + OUT_END.length
+      );
       state.stderrBuffer = state.stderrBuffer.slice(errEnd + ERR_END.length);
+      state.streaming = false;
+      state.execution = null;
 
       const resolve = state.pendingResolve;
       state.pendingResolve = null;
       state.pendingReject = null;
-      resolve({ stdout, stderr });
+      resolve({ stderr });
     }
   }
 
   private async _eval(
     state: WorkerState,
     code: string,
-    token: vscode.CancellationToken
-  ): Promise<{ stdout: string; stderr: string }> {
+    token: vscode.CancellationToken,
+    execution: vscode.NotebookCellExecution
+  ): Promise<{ stderr: string }> {
     return new Promise((resolve, reject) => {
       if (!state.worker.stdin) {
         reject(new Error("Worker not running"));
         return;
       }
 
+      state.execution = execution;
+      state.streamedStdout = "";
       state.pendingResolve = resolve;
       state.pendingReject = reject;
 
       const cancelDisposable = token.onCancellationRequested(() => {
+        state.execution = null;
+        state.streaming = false;
         state.pendingResolve = null;
         state.pendingReject = null;
         reject(new Error("Execution cancelled."));
@@ -254,20 +306,18 @@ export class BunbookController {
       const state = this._workers.get(notebook.uri.toString());
       if (!state) throw new Error("Worker not running");
 
+      execution.replaceOutput([]);
       const code = cell.document.getText();
-      const { stdout, stderr } = await this._eval(state, code, execution.token);
-
-      const outputs = parseOutput(stdout);
+      const { stderr } = await this._eval(state, code, execution.token, execution);
 
       if (stderr.trim()) {
-        outputs.push(
+        execution.appendOutput([
           new vscode.NotebookCellOutput([
             vscode.NotebookCellOutputItem.stderr(stderr.trim()),
-          ])
-        );
+          ]),
+        ]);
       }
 
-      execution.replaceOutput(outputs);
       execution.end(true, Date.now());
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
