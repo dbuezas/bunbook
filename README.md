@@ -1,3 +1,5 @@
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/dbuezas)
+
 # BunBook
 
 A VS Code notebook extension for running TypeScript with [Bun](https://bun.sh). Fast startup, shared state across cells, inline Plotly charts, and full TypeScript intellisense.
@@ -142,3 +144,8 @@ bun start
 ```
 
 This builds, packages, and installs the extension locally. Reload VS Code to pick up changes.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=dbuezas/bunbook&type=Date)](https://star-history.com/#dbuezas/bunbook&Date)
+
