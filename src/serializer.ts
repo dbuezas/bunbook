@@ -8,6 +8,7 @@ import {
   sourceToString,
   parseIpynb,
 } from "./ipynb";
+import { CELL_LANGUAGE } from "./language";
 
 const decoder = new TextDecoder();
 
@@ -23,7 +24,7 @@ export class BunbookSerializer implements vscode.NotebookSerializer {
 
   private _emptyNotebook(): vscode.NotebookData {
     return new vscode.NotebookData([
-      new vscode.NotebookCellData(vscode.NotebookCellKind.Code, "", "typescript"),
+      new vscode.NotebookCellData(vscode.NotebookCellKind.Code, "", CELL_LANGUAGE),
     ]);
   }
 
@@ -36,7 +37,7 @@ export class BunbookSerializer implements vscode.NotebookSerializer {
       const kind = cell.cell_type === "markdown"
         ? vscode.NotebookCellKind.Markup
         : vscode.NotebookCellKind.Code;
-      const language = cell.cell_type === "markdown" ? "markdown" : "typescript";
+      const language = cell.cell_type === "markdown" ? "markdown" : CELL_LANGUAGE;
       const value = sourceToString(cell.source);
       const cellData = new vscode.NotebookCellData(kind, value, language);
       if (cell.id) cellData.metadata = { id: cell.id };

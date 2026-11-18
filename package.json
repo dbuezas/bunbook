@@ -41,6 +41,54 @@
         ]
       }
     ],
+    "languages": [
+      {
+        "id": "bunbook-typescript",
+        "aliases": [
+          "TypeScript (BunBook)"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "bunbook-typescript",
+        "scopeName": "source.ts.bunbook",
+        "path": "./syntaxes/bunbook-typescript.tmLanguage.json",
+        "unbalancedBracketScopes": [
+          "keyword.operator.relational",
+          "storage.type.function.arrow",
+          "keyword.operator.bitwise.shift",
+          "meta.brace.angle",
+          "punctuation.definition.tag",
+          "keyword.operator.assignment.compound.bitwise.ts"
+        ],
+        "tokenTypes": {
+          "punctuation.definition.template-expression": "other",
+          "entity.name.type.instance.jsdoc": "other",
+          "entity.name.function.tagged-template": "other",
+          "meta.import string.quoted": "other",
+          "variable.other.jsdoc": "other"
+        }
+      }
+    ],
+    "configuration": {
+      "title": "BunBook",
+      "properties": {
+        "bunbook.useTsconfig": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Use a tsconfig.json for notebook intellisense (compiler options, `paths`, `types`, etc.). When disabled, BunBook's built-in compiler options are used."
+        },
+        "bunbook.tsconfigPath": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "markdownDescription": "Path to the `tsconfig.json` used for notebook intellisense. Absolute, or relative to the workspace folder. When empty, the nearest `tsconfig.json` in the notebook's directory or its parents is used."
+        }
+      }
+    },
     "commands": [
       {
         "command": "bunbook.restartKernel",

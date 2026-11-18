@@ -103,6 +103,19 @@ const data = [1, 2, 3, 4, 5];
 console.log(mean(data));
 ```
 
+## TypeScript Configuration
+
+Intellisense uses the nearest `tsconfig.json` in the notebook's directory or its parents, so compiler options, `paths` aliases, `types` and `extends` work the same as in the rest of your project. Without a `tsconfig.json`, BunBook uses its built-in defaults (ES2022, bundler module resolution, non-strict).
+
+| Setting                | Default | Description                                                                                         |
+| ---------------------- | ------- | --------------------------------------------------------------------------------------------------- |
+| `bunbook.useTsconfig`  | `true`  | Use a `tsconfig.json` for intellisense. When disabled, the built-in defaults are always used.       |
+| `bunbook.tsconfigPath` | `""`    | Explicit `tsconfig.json` path, absolute or relative to the workspace folder. Empty = nearest one.   |
+
+Emit-related options (`noEmit`, `composite`, `declaration`, …) are ignored, since the notebook is never compiled to disk. The **BunBook IntelliSense** output channel shows which `tsconfig.json` each notebook uses and any errors reading it.
+
+Code cells use the `bunbook-typescript` language (TypeScript highlighting, shown as "TypeScript (BunBook)"). This keeps VS Code's built-in TypeScript service, which checks each cell in isolation, from adding duplicate hovers, completions and errors next to BunBook's. Cells of existing notebooks are switched over when the BunBook kernel is selected.
+
 ## Toolbar & Command Palette
 
 The notebook toolbar `...` overflow menu exposes:
