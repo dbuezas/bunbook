@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { spawn, ChildProcess } from "child_process";
 import { parseOutput } from "./outputParser";
+import { CELL_LANGUAGE, SUPPORTED_CELL_LANGUAGES } from "./language";
 
 const EVAL_START = "___EVAL_START___";
 const EVAL_END = "___EVAL_END___";
@@ -25,7 +26,7 @@ interface WorkerState {
 
 export class BunbookController {
   private readonly _label = "TypeScript (Bun)";
-  private readonly _supportedLanguages = ["typescript"];
+  private readonly _supportedLanguages = SUPPORTED_CELL_LANGUAGES;
   private readonly _bunbookController: vscode.NotebookController;
   private readonly _jupyterController: vscode.NotebookController;
   private _executionOrder = 0;
@@ -60,8 +61,10 @@ export class BunbookController {
       if (!selected) return;
       for (let i = 0; i < notebook.cellCount; i++) {
         const cell = notebook.cellAt(i);
-        if (cell.kind === vscode.NotebookCellKind.Code && cell.document.languageId !== "typescript") {
-          await vscode.languages.setTextDocumentLanguage(cell.document, "typescript");
+        // Also migrates cells from the legacy "typescript" id, so VS Code's
+        // built-in TypeScript service stops attaching to them (see language.ts).
+        if (cell.kind === vscode.NotebookCellKind.Code && cell.document.languageId !== CELL_LANGUAGE) {
+          await vscode.languages.setTextDocumentLanguage(cell.document, CELL_LANGUAGE);
         }
       }
     });

@@ -1,6 +1,9 @@
 import * as path from "path";
 import type * as TS from "typescript";
 import * as vscode from "vscode";
+import { SUPPORTED_CELL_LANGUAGES } from "./language";
+import { VirtualLanguageServiceHost } from "./languageServiceHost";
+import { findTsconfig, resolveCompilerOptions } from "./tsconfig";
 
 let ts: typeof TS;
 
@@ -39,6 +42,9 @@ export class BunbookIntellisense {
   private readonly _disposables: vscode.Disposable[] = [];
   private _service: TS.LanguageService | null = null;
   private _host: VirtualLanguageServiceHost | null = null;
+  /** Identifies the notebook directory + tsconfig the current service was built for. */
+  private _serviceKey: string | null = null;
+  private readonly _log: vscode.OutputChannel;
 
   private readonly _diagnostics: vscode.DiagnosticCollection;
   private _debounceTimer: NodeJS.Timeout | null = null;
@@ -47,8 +53,29 @@ export class BunbookIntellisense {
     this._diagnostics =
       vscode.languages.createDiagnosticCollection("bunbook");
     this._disposables.push(this._diagnostics);
+    this._log = vscode.window.createOutputChannel("BunBook IntelliSense");
+    this._disposables.push(this._log);
 
-    const selector = { scheme: "vscode-notebook-cell", language: "typescript" };
+    const selector = SUPPORTED_CELL_LANGUAGES.map((language) => ({
+      scheme: "vscode-notebook-cell",
+      language,
+    }));
+
+    // Rebuild the service when a tsconfig (or a file it extends) or the
+    // related settings change.
+    const tsconfigWatcher = vscode.workspace.createFileSystemWatcher("**/*tsconfig*.json");
+    const invalidate = () => this._invalidateService();
+    tsconfigWatcher.onDidChange(invalidate);
+    tsconfigWatcher.onDidCreate(invalidate);
+    tsconfigWatcher.onDidDelete(invalidate);
+    this._disposables.push(tsconfigWatcher);
+    this._disposables.push(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration("bunbook.useTsconfig") || e.affectsConfiguration("bunbook.tsconfigPath")) {
+          invalidate();
+        }
+      })
+    );
 
     this._disposables.push(
       vscode.languages.registerCompletionItemProvider(
@@ -125,7 +152,7 @@ export class BunbookIntellisense {
 
   dispose(): void {
     if (this._debounceTimer) clearTimeout(this._debounceTimer);
-    this._service?.dispose();
+    this._invalidateService();
     for (const d of this._disposables) d.dispose();
   }
 
@@ -137,8 +164,7 @@ export class BunbookIntellisense {
   }
 
   private _updateDiagnostics(notebook: vscode.NotebookDocument): void {
-    const cwd = path.dirname(notebook.uri.fsPath);
-    const { service, host } = this._ensureService(cwd);
+    const { service, host } = this._ensureService(notebook);
 
     const codeCells = notebook
       .getCells()
@@ -203,18 +229,46 @@ export class BunbookIntellisense {
     }
   }
 
-  private _ensureService(cwd: string): {
+  private _invalidateService(): void {
+    this._service?.dispose();
+    this._service = null;
+    this._host = null;
+    this._serviceKey = null;
+  }
+
+  private _ensureService(notebook: vscode.NotebookDocument): {
     service: TS.LanguageService;
     host: VirtualLanguageServiceHost;
   } {
     loadTypeScript();
-    if (!this._service || !this._host || this._host.cwd !== cwd) {
+    const notebookDir = path.dirname(notebook.uri.fsPath);
+    const config = vscode.workspace.getConfiguration("bunbook", notebook.uri);
+    const configPath = findTsconfig(ts, notebookDir, {
+      useTsconfig: config.get<boolean>("useTsconfig", true),
+      tsconfigPath: config.get<string>("tsconfigPath", ""),
+      baseDir: vscode.workspace.getWorkspaceFolder(notebook.uri)?.uri.fsPath ?? notebookDir,
+    });
+    const key = `${notebookDir}\0${configPath ?? ""}`;
+
+    if (!this._service || !this._host || this._serviceKey !== key) {
       this._service?.dispose();
-      this._host = new VirtualLanguageServiceHost(cwd, this._extensionPath);
+      const resolved = resolveCompilerOptions(ts, {
+        notebookDir,
+        extensionPath: this._extensionPath,
+        configPath,
+      });
+      this._log.appendLine(
+        `${notebook.uri.fsPath}: using ${resolved.configPath ?? "built-in compiler options (no tsconfig.json)"}`
+      );
+      for (const error of resolved.errors) {
+        this._log.appendLine(`  tsconfig error: ${error}`);
+      }
+      this._host = new VirtualLanguageServiceHost(ts, notebookDir, resolved.options);
       this._service = ts.createLanguageService(
         this._host,
         ts.createDocumentRegistry()
       );
+      this._serviceKey = key;
     }
     return { service: this._service, host: this._host };
   }
@@ -232,8 +286,7 @@ export class BunbookIntellisense {
       .find((c) => c.document.uri.toString() === doc.uri.toString());
     if (!cell) return null;
 
-    const cwd = path.dirname(notebook.uri.fsPath);
-    const { service, host } = this._ensureService(cwd);
+    const { service, host } = this._ensureService(notebook);
 
     const codeCells = notebook
       .getCells()
@@ -427,181 +480,6 @@ export class BunbookIntellisense {
         return new vscode.Location(uri, startPos);
       })
       .filter((loc): loc is vscode.Location => loc !== null);
-  }
-}
-
-// Virtual file name only — the host prepends cwd to get the full path
-const VIRTUAL_FILENAME = "___bunbook___.ts";
-
-// Prepended to the virtual file so TypeScript treats it as a module (enabling top-level await)
-const VIRTUAL_PREAMBLE = "export {};\n";
-
-// Ambient declarations for globals available in the worker.
-// This file must remain a script (no imports) so declarations are global.
-// We use /// <reference types="plotly.js" /> to get Plotly types, then
-// re-declare the Plotly const with our element-less API.
-const AMBIENT_DECLARATIONS = `
-/// <reference types="bun-types" />
-/// <reference types="plotly.js" />
-
-// BunBook's Plotly API: same as Plotly.js but without the root element parameter.
-interface BunBookPlotly {
-  newPlot(
-    data: Plotly.Data[],
-    layout?: Partial<Plotly.Layout>,
-    config?: Partial<Plotly.Config>
-  ): void;
-}
-
-declare const Plotly: BunBookPlotly;
-
-interface DisplayFunction {
-  /** Generic display: raw string + MIME type */
-  (data: string, mime?: string): void;
-  /** Multi-MIME display: record of MIME type → data */
-  (record: Record<string, string>): void;
-  /** Display HTML content */
-  html(html: string): void;
-  /** Display an image from a buffer (defaults to image/png) */
-  image(buffer: Buffer | Uint8Array, mime?: string): void;
-  /** Display Markdown content */
-  markdown(md: string): void;
-  /** Display a JSON object */
-  json(obj: any): void;
-  /** Display SVG content */
-  svg(svg: string): void;
-  /** Render an interactive Plotly chart */
-  plotly(data: Plotly.Data[], layout?: Partial<Plotly.Layout>, config?: Partial<Plotly.Config>): void;
-}
-
-declare const display: DisplayFunction;
-`;
-
-const AMBIENT_FILE = "/___bunbook_ambient___.d.ts";
-
-class VirtualLanguageServiceHost implements TS.LanguageServiceHost {
-  private _content = "";
-  private _version = 0;
-  private _cellOffsets: { cellIndex: number; start: number; length: number }[] =
-    [];
-
-  readonly virtualFile: string;
-
-  constructor(
-    readonly cwd: string,
-    private readonly _extensionPath: string
-  ) {
-    this.virtualFile = path.join(cwd, VIRTUAL_FILENAME);
-  }
-
-  getCompilationSettings(): TS.CompilerOptions {
-    return {
-      target: ts.ScriptTarget.ES2022,
-      module: ts.ModuleKind.ESNext,
-      moduleResolution: ts.ModuleResolutionKind.Bundler,
-      strict: false,
-      esModuleInterop: true,
-      allowJs: true,
-      lib: ["lib.es2022.d.ts"],
-      typeRoots: [
-        path.join(this.cwd, "node_modules", "@types"),
-        path.join(this.cwd, "node_modules"),
-        path.join(this._extensionPath, "node_modules", "@types"),
-        path.join(this._extensionPath, "node_modules"),
-      ],
-    };
-  }
-
-  getScriptFileNames(): string[] {
-    return [this.virtualFile, AMBIENT_FILE];
-  }
-
-  getScriptVersion(fileName: string): string {
-    if (fileName === this.virtualFile) return this._version.toString();
-    if (fileName === AMBIENT_FILE) return "1";
-    return "0";
-  }
-
-  getScriptSnapshot(fileName: string): TS.IScriptSnapshot | undefined {
-    if (fileName === this.virtualFile) {
-      return ts.ScriptSnapshot.fromString(this._content);
-    }
-    if (fileName === AMBIENT_FILE) {
-      return ts.ScriptSnapshot.fromString(AMBIENT_DECLARATIONS);
-    }
-    if (ts.sys.fileExists(fileName)) {
-      return ts.ScriptSnapshot.fromString(ts.sys.readFile(fileName)!);
-    }
-    return undefined;
-  }
-
-  getCurrentDirectory(): string {
-    return this.cwd;
-  }
-
-  getDefaultLibFileName(options: TS.CompilerOptions): string {
-    return ts.getDefaultLibFilePath(options);
-  }
-
-  fileExists(p: string): boolean {
-    return p === this.virtualFile || p === AMBIENT_FILE || ts.sys.fileExists(p);
-  }
-
-  readFile(p: string): string | undefined {
-    if (p === this.virtualFile) return this._content;
-    if (p === AMBIENT_FILE) return AMBIENT_DECLARATIONS;
-    return ts.sys.readFile(p);
-  }
-
-  updateVirtualFile(cells: { text: string; cellIndex: number }[]): void {
-    const offsets: typeof this._cellOffsets = [];
-    let pos = VIRTUAL_PREAMBLE.length;
-    const parts: string[] = [];
-
-    for (const cell of cells) {
-      offsets.push({
-        cellIndex: cell.cellIndex,
-        start: pos,
-        length: cell.text.length,
-      });
-      parts.push(cell.text);
-      pos += cell.text.length + 1; // +1 for \n separator
-    }
-
-    this._content = VIRTUAL_PREAMBLE + parts.join("\n");
-    this._cellOffsets = offsets;
-    this._version++;
-  }
-
-  getCellOffset(
-    cellIndex: number
-  ): { start: number; length: number } | undefined {
-    const entry = this._cellOffsets.find((o) => o.cellIndex === cellIndex);
-    if (!entry) return undefined;
-    return { start: entry.start, length: entry.length };
-  }
-
-  cellPositionToOffset(
-    cellIndex: number,
-    posInCell: number
-  ): number | undefined {
-    const entry = this._cellOffsets.find((o) => o.cellIndex === cellIndex);
-    if (!entry) return undefined;
-    return entry.start + posInCell;
-  }
-
-  offsetToCellPosition(
-    offset: number
-  ): { cellIndex: number; positionInCell: number } | undefined {
-    for (const entry of this._cellOffsets) {
-      if (offset >= entry.start && offset < entry.start + entry.length) {
-        return {
-          cellIndex: entry.cellIndex,
-          positionInCell: offset - entry.start,
-        };
-      }
-    }
-    return undefined;
   }
 }
 

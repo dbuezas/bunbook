@@ -67,6 +67,13 @@ TypeScript is loaded at runtime from VS Code's built-in `vscode.typescript-langu
 
 Provides: completions, hover, formatting, go-to-definition, and diagnostics (debounced 500ms). Ambient declarations define Plotly types inline.
 
+The language service host lives in `src/languageServiceHost.ts` (no `vscode` import, so it is unit-tested with the real TypeScript package). External files are versioned by mtime (cached for 1s) so dependency changes are picked up.
+
+Compiler options come from `src/tsconfig.ts`: BunBook defaults < nearest `tsconfig.json` (or `bunbook.tsconfigPath`) < forced options (`noEmit`, no declaration/composite). BunBook's own type roots are always appended. The service is rebuilt when a `*tsconfig*.json` file or the `bunbook.useTsconfig` / `bunbook.tsconfigPath` settings change.
+
+### Cell language (`src/language.ts`)
+Code cells use the `bunbook-typescript` language id, contributed in `package.json` with a grammar that includes `source.ts` (`syntaxes/`) and VS Code's TypeScript `language-configuration.json`. Using plain `typescript` would make VS Code's built-in TypeScript service attach to each cell as an isolated file and show duplicate, wrong hovers and diagnostics. The controller still accepts legacy `typescript` cells and migrates them when the kernel is selected.
+
 ### Renderer (`src/renderer/index.ts`)
 Browser-side ESM module for VS Code's notebook webview. Renders `application/vnd.bunbook.plotly` output items by parsing the JSON string and calling Plotly.js. Lazy-loads Plotly from CDN (temporarily removing `window.define` to avoid AMD/RequireJS conflicts). Uses ResizeObserver for responsive charts.
 

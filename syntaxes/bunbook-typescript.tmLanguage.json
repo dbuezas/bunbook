@@ -1,0 +1,5 @@
+{
+  "name": "TypeScript (BunBook)",
+  "scopeName": "source.ts.bunbook",
+  "patterns": [{ "include": "source.ts" }]
+}

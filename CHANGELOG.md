@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **tsconfig.json support** — intellisense now uses the nearest `tsconfig.json` (or the one set in `bunbook.tsconfigPath`), including `paths`, `types`, `strict` and `extends`. Set `bunbook.useTsconfig` to `false` to keep the previous fixed compiler options
+- **No more duplicate hovers and errors** — code cells now use the `bunbook-typescript` language instead of `typescript`, so VS Code's built-in TypeScript service (which checks each cell in isolation and reports wrong `any` types and missing imports) no longer attaches to them. Existing cells are migrated when the BunBook kernel is selected
+- **Fresh types after dependency changes** — files outside the notebook are versioned by modification time, so reinstalling or editing a dependency updates intellisense without reloading the window
+
 ## 1.2.1
 
 - **Auto-set cell language to TypeScript** — when selecting the BunBook kernel on a `.ipynb` notebook, existing code cells are automatically switched from Python (or any other language) to TypeScript
